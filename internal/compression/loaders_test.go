@@ -49,7 +49,7 @@ func TestLoadBinZstdFile(t *testing.T) {
 	}
 }
 
-func TestLoadLinesGzFile(t *testing.T) {
+func TestIterateLinesGz(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.txt.gz")
 
@@ -60,7 +60,7 @@ func TestLoadLinesGzFile(t *testing.T) {
 	f.Close()
 
 	var lines []string
-	compression.LoadLinesGzFile(testFile, func(line string) {
+	compression.IterateLinesGz(testFile, func(line string) {
 		lines = append(lines, line)
 	})
 
@@ -69,7 +69,7 @@ func TestLoadLinesGzFile(t *testing.T) {
 	}
 }
 
-func TestLoadLinesZstdFile(t *testing.T) {
+func TestIterateLinesZstd(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.txt.zst")
 
@@ -80,7 +80,7 @@ func TestLoadLinesZstdFile(t *testing.T) {
 	f.Close()
 
 	var lines []string
-	compression.LoadLinesZstdFile(testFile, func(line string) {
+	compression.IterateLinesZstd(testFile, func(line string) {
 		lines = append(lines, line)
 	})
 

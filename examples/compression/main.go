@@ -44,11 +44,11 @@ func main() {
 	fmt.Printf("Loaded %d bytes: %s\n", len(data), string(data))
 	fmt.Println()
 
-	// Example 3: LoadLinesFile with auto-decompression
-	fmt.Println("Example 3: LoadLinesFile with automatic decompression")
-	fmt.Println("------------------------------------------------------")
+	// Example 3: IterateLines with auto-decompression
+	fmt.Println("Example 3: IterateLines with automatic decompression")
+	fmt.Println("-----------------------------------------------------")
 	lineCount := 0
-	fileiterator.LoadLinesFile(testFile, func(line string) {
+	fileiterator.IterateLines(testFile, func(line string) {
 		lineCount++
 		fmt.Printf("Line %d: %s\n", lineCount, line)
 	})

@@ -41,12 +41,12 @@ fileiterator.LoadBinFile("data.bin.gz", &data)
 fmt.Printf("Loaded %d bytes\n", len(data))
 ```
 
-#### LoadLinesFile - Process Lines
+#### IterateLines - Process Lines
 
 Process lines in a text file with automatic decompression:
 
 ```go
-fileiterator.LoadLinesFile("log.txt.zst", func(line string) {
+fileiterator.IterateLines("log.txt.zst", func(line string) {
     fmt.Println(line)
 })
 ```
@@ -59,13 +59,13 @@ When you need explicit control over the compression format:
 // Gzip loaders
 var data []byte
 fileiterator.LoadBinGzFile("data.bin.gz", &data)
-fileiterator.LoadLinesGzFile("log.txt.gz", func(line string) {
+fileiterator.IterateLinesGz("log.txt.gz", func(line string) {
     fmt.Println(line)
 })
 
 // Zstd loaders
 fileiterator.LoadBinZstdFile("data.bin.zst", &data)
-fileiterator.LoadLinesZstdFile("log.txt.zst", func(line string) {
+fileiterator.IterateLinesZstd("log.txt.zst", func(line string) {
     fmt.Println(line)
 })
 

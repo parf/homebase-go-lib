@@ -135,7 +135,7 @@ func TestLoadBinFile(t *testing.T) {
 	}
 }
 
-func TestLoadLinesFile(t *testing.T) {
+func TestIterateLines(t *testing.T) {
 	tmpDir := t.TempDir()
 	testLines := []string{"Line 1", "Line 2", "Line 3"}
 
@@ -143,7 +143,7 @@ func TestLoadLinesFile(t *testing.T) {
 	plainFile := filepath.Join(tmpDir, "plain.txt")
 	ioutil.WriteFile(plainFile, []byte("Line 1\nLine 2\nLine 3\n"), 0644)
 	var result1 []string
-	fileiterator.LoadLinesFile(plainFile, func(line string) {
+	fileiterator.IterateLines(plainFile, func(line string) {
 		result1 = append(result1, line)
 	})
 	if len(result1) != len(testLines) {
@@ -158,7 +158,7 @@ func TestLoadLinesFile(t *testing.T) {
 	gz.Close()
 	f.Close()
 	var result2 []string
-	fileiterator.LoadLinesFile(gzFile, func(line string) {
+	fileiterator.IterateLines(gzFile, func(line string) {
 		result2 = append(result2, line)
 	})
 	if len(result2) != len(testLines) {
@@ -173,7 +173,7 @@ func TestLoadLinesFile(t *testing.T) {
 	zw.Close()
 	f2.Close()
 	var result3 []string
-	fileiterator.LoadLinesFile(zstFile, func(line string) {
+	fileiterator.IterateLines(zstFile, func(line string) {
 		result3 = append(result3, line)
 	})
 	if len(result3) != len(testLines) {
@@ -219,7 +219,7 @@ func TestLoadBinZstdFile(t *testing.T) {
 	}
 }
 
-func TestLoadLinesGzFile(t *testing.T) {
+func TestIterateLinesGz(t *testing.T) {
 	tmpDir := t.TempDir()
 	testLines := []string{"Line 1", "Line 2", "Line 3"}
 
@@ -232,7 +232,7 @@ func TestLoadLinesGzFile(t *testing.T) {
 	f.Close()
 
 	var result []string
-	fileiterator.LoadLinesGzFile(gzFile, func(line string) {
+	fileiterator.IterateLinesGz(gzFile, func(line string) {
 		result = append(result, line)
 	})
 	if len(result) != len(testLines) {
@@ -240,7 +240,7 @@ func TestLoadLinesGzFile(t *testing.T) {
 	}
 }
 
-func TestLoadLinesZstdFile(t *testing.T) {
+func TestIterateLinesZstd(t *testing.T) {
 	tmpDir := t.TempDir()
 	testLines := []string{"Line 1", "Line 2", "Line 3"}
 
@@ -253,7 +253,7 @@ func TestLoadLinesZstdFile(t *testing.T) {
 	f.Close()
 
 	var result []string
-	fileiterator.LoadLinesZstdFile(zstFile, func(line string) {
+	fileiterator.IterateLinesZstd(zstFile, func(line string) {
 		result = append(result, line)
 	})
 	if len(result) != len(testLines) {

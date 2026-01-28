@@ -68,8 +68,8 @@ func LoadBinZstdFile(filename string, dest *[]byte) {
 	fmt.Printf("File %s loaded. %d bytes\n", filename, len(*dest))
 }
 
-// LoadLinesGzFile processes lines in a gzipped file (explicit gzip)
-func LoadLinesGzFile(filename string, processor func(string)) {
+// IterateLinesGz processes lines in a gzipped file (explicit gzip)
+func IterateLinesGz(filename string, processor func(string)) {
 	fi := openFileOrURL(filename)
 	defer fi.Close()
 
@@ -89,8 +89,8 @@ func LoadLinesGzFile(filename string, processor func(string)) {
 	fmt.Printf("File %s. Lines processed: %d\n", filename, count)
 }
 
-// LoadLinesZstdFile processes lines in a zstd-compressed file
-func LoadLinesZstdFile(filename string, processor func(string)) {
+// IterateLinesZstd processes lines in a zstd-compressed file
+func IterateLinesZstd(filename string, processor func(string)) {
 	fi := openFileOrURL(filename)
 	defer fi.Close()
 

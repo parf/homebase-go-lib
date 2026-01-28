@@ -40,26 +40,31 @@ func main() {
 - **SqlIterator**: Iterate over SQL queries with statistics
 - **sql/SqlExtra**: Execute SQL queries and get results as maps (dynamic schema)
 
-### File Processing
+### File Iterator Package (`fileiterator/`)
+
+**All file processing unified in one package!**
+
+**Auto-Detection Loaders:**
 - **FUOpen**: Universal file/URL opener with auto-decompression (.gz, .zst)
 - **LoadBinFile**: Load any file with automatic decompression detection
-- **LoadLinesFile**: Process text files line-by-line with auto-decompression
+- **IterateLines**: Process text files line-by-line with auto-decompression
 
-### Compression Package (`compression/`)
+**Binary Record Iterators:**
 - **IterateBinaryRecords**: Iterate over fixed-size binary records (auto-detects: .gz, .zst, .zlib)
-- **LoadBinGzFile** / **LoadBinZstdFile**: Explicit binary file loaders
-- **LoadLinesGzFile** / **LoadLinesZstdFile**: Explicit text file loaders
-- **LoadIDTabGzFile**: Process tab-separated gzipped files
-- **IterateZlibRecords** / **IterateGzipRecords** / **IterateZstdRecords**: Binary record iterators
+- **IterateZlibRecords** / **IterateGzipRecords** / **IterateZstdRecords**: Explicit format iterators
 
-**Supported Compression:** gzip (.gz), zstd (.zst), zlib (.zlib, .zz)
-
-### File Iterator Package (`fileiterator/`)
+**Structured Data Iterators:**
 - **IterateJSONL**: Process JSON Lines files (untyped)
-- **IterateJSONLTyped**: Process JSON Lines files with type-safety
+- **IterateJSONLTyped**: Process JSON Lines files with type-safety (generics)
 - **IterateCSV**: Process CSV files row-by-row
 - **IterateCSVMap**: Process CSV with header as maps
-- **Supports:** Compression auto-detection, URLs (HTTP/HTTPS), custom delimiters
+
+**Explicit Format Loaders:**
+- **LoadBinGzFile** / **LoadBinZstdFile**: Binary file loaders
+- **IterateLinesGz** / **IterateLinesZstd**: Text file line processors
+- **LoadIDTabGzFile**: Tab-separated hex ID-name pairs
+
+**Supported:** Compression auto-detection, URLs (HTTP/HTTPS), custom delimiters, gzip (.gz), zstd (.zst), zlib (.zlib, .zz)
 
 ### Debugging & Logging
 - **Debug**: Configurable debug output (stderr or log)
