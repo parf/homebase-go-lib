@@ -1,0 +1,116 @@
+# Compression Package
+
+The `compression` package provides explicit compression format loaders for gzip and zstd formats.
+
+For automatic decompression detection, use the main `hb` package functions: `FUOpen`, `LoadBinFile`, and `LoadLinesFile`.
+
+## Functions
+
+### Binary File Loaders
+
+#### LoadBinGzFile(filename string, dest *[]byte)
+
+Load gzipped binary file explicitly.
+
+```go
+import "github.com/parf/homebase-go-lib/compression"
+
+var data []byte
+compression.LoadBinGzFile("file.bin.gz", &data)
+```
+
+#### LoadBinZstdFile(filename string, dest *[]byte)
+
+Load zstd-compressed binary file explicitly.
+
+```go
+var data []byte
+compression.LoadBinZstdFile("file.bin.zst", &data)
+```
+
+### Text File Loaders
+
+#### LoadLinesGzFile(filename string, processor func(string))
+
+Process lines in a gzipped text file.
+
+```go
+compression.LoadLinesGzFile("file.txt.gz", func(line string) {
+    fmt.Println(line)
+})
+```
+
+#### LoadLinesZstdFile(filename string, processor func(string))
+
+Process lines in a zstd-compressed text file.
+
+```go
+compression.LoadLinesZstdFile("file.txt.zst", func(line string) {
+    fmt.Println(line)
+})
+```
+
+### Special Format Loaders
+
+#### LoadIDTabGzFile(filename string, processor func(int32, string))
+
+Process tab-separated ID-name pairs from a gzipped file. IDs are parsed as hexadecimal int32, names are converted to lowercase.
+
+```go
+compression.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
+    fmt.Printf("ID: %d, Name: %s\n", id, name)
+})
+```
+
+## When to Use
+
+**Use this package when:**
+- You need explicit control over the compression format
+- You're working with files that don't have standard extensions
+- You want to be explicit about the expected compression format
+
+**Use main package (hb) functions when:**
+- You want automatic compression detection by file extension
+- You're processing files with standard extensions (.gz, .zst)
+- You want simpler, more convenient code
+
+## Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/parf/homebase-go-lib/compression"
+)
+
+func main() {
+    // Load binary gzip file
+    var data []byte
+    compression.LoadBinGzFile("data.bin.gz", &data)
+    fmt.Printf("Loaded %d bytes\n", len(data))
+
+    // Process text lines from zstd file
+    compression.LoadLinesZstdFile("log.txt.zst", func(line string) {
+        fmt.Println(line)
+    })
+
+    // Process ID-name pairs
+    compression.LoadIDTabGzFile("names.tab.gz", func(id int32, name string) {
+        fmt.Printf("%x: %s\n", id, name)
+    })
+}
+```
+
+## Supported Formats
+
+- **Gzip** (.gz) - Standard gzip compression
+- **Zstd** (.zst) - Zstandard compression (modern, faster)
+
+## URL Support
+
+All loaders support both local files and HTTP URLs:
+
+```go
+compression.LoadBinGzFile("http://example.com/data.bin.gz", &data)
+```

@@ -1,0 +1,182 @@
+package hb_test
+
+import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
+	hb "github.com/parf/homebase-go-lib"
+	"github.com/klauspost/compress/zstd"
+)
+
+func TestFUOpenPlainFile(t *testing.T) {
+	// Create temp plain file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt")
+	testData := []byte("Hello, World!")
+
+	err := ioutil.WriteFile(testFile, testData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Test FUOpen
+	r := hb.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenGzipFile(t *testing.T) {
+	// Create temp gzipped file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.gz")
+	testData := []byte("Hello, Gzip!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	gz := gzip.NewWriter(f)
+	gz.Write(testData)
+	gz.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := hb.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenZstdFile(t *testing.T) {
+	// Create temp zstd file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.zst")
+	testData := []byte("Hello, Zstd!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	zw, _ := zstd.NewWriter(f)
+	zw.Write(testData)
+	zw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := hb.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestLoadBinFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testData := []byte("Test data for LoadBinFile")
+
+	// Test plain file
+	plainFile := filepath.Join(tmpDir, "plain.txt")
+	ioutil.WriteFile(plainFile, testData, 0644)
+	var result1 []byte
+	hb.LoadBinFile(plainFile, &result1)
+	if !bytes.Equal(result1, testData) {
+		t.Errorf("Plain file: Expected %s, got %s", testData, result1)
+	}
+
+	// Test gzipped file
+	gzFile := filepath.Join(tmpDir, "test.txt.gz")
+	f, _ := os.Create(gzFile)
+	gz := gzip.NewWriter(f)
+	gz.Write(testData)
+	gz.Close()
+	f.Close()
+	var result2 []byte
+	hb.LoadBinFile(gzFile, &result2)
+	if !bytes.Equal(result2, testData) {
+		t.Errorf("Gzip file: Expected %s, got %s", testData, result2)
+	}
+
+	// Test zstd file
+	zstFile := filepath.Join(tmpDir, "test.txt.zst")
+	f2, _ := os.Create(zstFile)
+	zw, _ := zstd.NewWriter(f2)
+	zw.Write(testData)
+	zw.Close()
+	f2.Close()
+	var result3 []byte
+	hb.LoadBinFile(zstFile, &result3)
+	if !bytes.Equal(result3, testData) {
+		t.Errorf("Zstd file: Expected %s, got %s", testData, result3)
+	}
+}
+
+func TestLoadLinesFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testLines := []string{"Line 1", "Line 2", "Line 3"}
+
+	// Test plain file
+	plainFile := filepath.Join(tmpDir, "plain.txt")
+	ioutil.WriteFile(plainFile, []byte("Line 1\nLine 2\nLine 3\n"), 0644)
+	var result1 []string
+	hb.LoadLinesFile(plainFile, func(line string) {
+		result1 = append(result1, line)
+	})
+	if len(result1) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result1))
+	}
+
+	// Test gzipped file
+	gzFile := filepath.Join(tmpDir, "test.txt.gz")
+	f, _ := os.Create(gzFile)
+	gz := gzip.NewWriter(f)
+	gz.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	gz.Close()
+	f.Close()
+	var result2 []string
+	hb.LoadLinesFile(gzFile, func(line string) {
+		result2 = append(result2, line)
+	})
+	if len(result2) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result2))
+	}
+
+	// Test zstd file
+	zstFile := filepath.Join(tmpDir, "test.txt.zst")
+	f2, _ := os.Create(zstFile)
+	zw, _ := zstd.NewWriter(f2)
+	zw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	zw.Close()
+	f2.Close()
+	var result3 []string
+	hb.LoadLinesFile(zstFile, func(line string) {
+		result3 = append(result3, line)
+	})
+	if len(result3) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result3))
+	}
+}

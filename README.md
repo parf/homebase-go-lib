@@ -41,9 +41,15 @@ func main() {
 - **sql/SqlExtra**: Execute SQL queries and get results as maps (dynamic schema)
 
 ### File Processing
-- **GZLoaders**: Load and process gzipped files (lines, binary, tab-separated)
+- **FUOpen**: Universal file/URL opener with auto-decompression (.gz, .zst)
+- **LoadBinFile**: Load any file with automatic decompression detection
+- **LoadLinesFile**: Process text files line-by-line with auto-decompression
+- **LoadBinGzFile** / **LoadBinZstdFile**: Explicit compression format loaders
+- **LoadLinesGzFile**: Process gzipped text files line-by-line
+- **LoadIDTabGzFile**: Process tab-separated gzipped files
 - **Zlib**: Process zlib-compressed binary files
-- **FUOpen**: Universal file/URL opener
+
+**Supported Compression:** gzip (.gz), zstd (.zst)
 
 ### Debugging & Logging
 - **Debug**: Configurable debug output (stderr or log)
