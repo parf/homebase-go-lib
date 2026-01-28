@@ -1,6 +1,6 @@
 # homebase-go-lib
 
-A Go library for [your project description].
+A comprehensive Go library for file processing, database operations, and system utilities with extensive compression support.
 
 ## Installation
 
@@ -8,63 +8,101 @@ A Go library for [your project description].
 go get github.com/parf/homebase-go-lib
 ```
 
-## Usage
+## Quick Start
 
 ```go
-import hb "github.com/parf/homebase-go-lib"
+import (
+    "github.com/parf/homebase-go-lib/fileiterator"
+    "github.com/parf/homebase-go-lib/clistat"
+    hb "github.com/parf/homebase-go-lib"
+)
 
 func main() {
-    // Use hb package
-    // Example: hb.Version
+    // Process compressed files automatically
+    fileiterator.IterateLines("data.txt.gz", func(line string) {
+        // Process each line
+    })
 
-    // Scale function - logarithmic scaling to 0-9 range
+    // Parse JSON Lines with type safety
+    type User struct {
+        Name  string `json:"name"`
+        Email string `json:"email"`
+    }
+    fileiterator.IterateJSONLTyped("users.jsonl.zst", func(user User) error {
+        // Process each user
+        return nil
+    })
+
+    // Track processing statistics
+    stat := clistat.New(10)
+    for i := 0; i < 1000000; i++ {
+        stat.Hit()  // Auto-reports progress
+    }
+    stat.Finish()
+
+    // Scale values logarithmically
     scale := hb.Scale(1024)  // Returns 6
 }
 ```
 
 ## Features
 
-### General Utilities (`General.go`)
-- **Scale**: Logarithmic base-4 scaling function (0-9 range)
-- **Any2uint32**: Convert various integer types to uint32
+### General Utilities
+- **Scale**: Logarithmic base-4 scaling (maps values to 0-9 range)
+- **Any2uint32**: Type-safe integer conversion
 - **DumpSortedMap**: Print maps in sorted key order
 
-### Performance & Monitoring
-- **CliStat**: CLI statistics tracker for hits per second monitoring
-- **Runner**: Parallel and sequential task runners with memory/timing stats
-- **JobScheduler**: Periodic job scheduler with start/stop control
-- **MemReport**: Memory allocation reporting
+### Performance & Monitoring (`clistat/`)
+- **CliStat**: Real-time statistics tracker with hits-per-second reporting
+- **New(timeout)**: Create tracker with configurable timeout
+- **Hit()**: Register event and auto-report progress
+- **Finish()**: Print final statistics
 
-### Database Utilities
-- **BatchInserter**: Batch SQL insert operations for performance
+### Task Management
+- **Runner**: Parallel and sequential task execution with memory/timing stats
+- **JobScheduler**: Periodic job scheduler with start/stop control
+- **MemReport**: Memory allocation tracking and reporting
+
+### Database Utilities (`sql/`)
+- **BatchInserter**: Batch SQL insert operations with auto-escaping support
 - **SqlIterator**: Iterate over SQL queries with statistics
-- **sql/SqlExtra**: Execute SQL queries and get results as maps (dynamic schema)
+- **SqlExtra**: Execute SQL queries and get results as maps (dynamic schema)
 
 ### File Iterator Package (`fileiterator/`)
 
-**All file processing unified in one package!**
+**Unified file processing with automatic compression detection for 7 formats!**
 
-**Auto-Detection Loaders:**
-- **FUOpen**: Universal file/URL opener with auto-decompression (.gz, .zst)
-- **LoadBinFile**: Load any file with automatic decompression detection
+#### Universal File Loaders (Auto-Detection)
+- **FUOpen**: Universal file/URL opener with auto-decompression
+- **LoadBinFile**: Load binary files with automatic decompression
 - **IterateLines**: Process text files line-by-line with auto-decompression
+- **IterateIDTabFile**: Process tab-separated hex ID-name pairs
 
-**Binary Record Iterators:**
-- **IterateBinaryRecords**: Iterate over fixed-size binary records (auto-detects: .gz, .zst, .zlib)
-- **IterateZlibRecords** / **IterateGzipRecords** / **IterateZstdRecords**: Explicit format iterators
+#### Binary Record Iterators
+- **IterateBinaryRecords**: Fixed-size binary records (auto-detects compression)
+- **IterateZlibRecords** / **IterateGzipRecords** / **IterateZstdRecords**: Explicit format control
 
-**Structured Data Iterators:**
-- **IterateJSONL**: Process JSON Lines files (untyped)
-- **IterateJSONLTyped**: Process JSON Lines files with type-safety (generics)
-- **IterateCSV**: Process CSV files row-by-row
-- **IterateCSVMap**: Process CSV with header as maps
+#### Structured Data Iterators
+- **IterateJSONL**: Process JSON Lines files (untyped maps)
+- **IterateJSONLTyped**: Process JSON Lines with type-safety (Go generics)
+- **IterateCSV**: Process CSV files row-by-row (arrays)
+- **IterateCSVMap**: Process CSV files with headers as maps
 
-**Explicit Format Loaders:**
-- **LoadBinGzFile** / **LoadBinZstdFile**: Binary file loaders
-- **IterateLinesGz** / **IterateLinesZstd**: Text file line processors
-- **LoadIDTabGzFile**: Tab-separated hex ID-name pairs
+#### Compression Support
+**7 formats with automatic detection:**
+- Gzip (.gz)
+- Zstd (.zst)
+- Zlib (.zlib, .zz)
+- LZ4 (.lz4)
+- Brotli (.br)
+- XZ (.xz)
+- Plain files
 
-**Supported:** Compression auto-detection, URLs (HTTP/HTTPS), custom delimiters, gzip (.gz), zstd (.zst), zlib (.zlib, .zz)
+#### Additional Features
+- **URL Support**: HTTP/HTTPS URLs work with all functions
+- **Custom Delimiters**: CSV with any delimiter (comma, tab, pipe, etc.)
+- **Streaming**: Low memory usage for large files
+- **Progress Tracking**: Automatic progress reporting
 
 ### Debugging & Logging
 - **Debug**: Configurable debug output (stderr or log)
@@ -114,16 +152,33 @@ make lint
 ├── .github/          # GitHub Actions CI/CD workflows
 ├── docs/             # Additional documentation
 ├── examples/         # Example usage code
-├── internal/         # Private packages (cannot be imported by external projects)
+├── internal/         # Private packages (compression legacy loaders)
 ├── testdata/         # Test fixtures and data files
-├── clistat/          # CLI statistics package
-├── sql/              # SQL utilities package
-├── homebase.go       # Main library code
+├── clistat/          # CLI statistics tracking package
+├── fileiterator/     # File processing and iteration package
+├── sql/              # SQL utilities and batch operations
+├── homebase.go       # Main library code (utilities)
 ├── homebase_test.go  # Tests
 ├── go.mod            # Go module definition
 ├── Makefile          # Build automation
 └── README.md         # This file
 ```
+
+## Key Packages
+
+| Package | Purpose | Key Functions |
+|---------|---------|---------------|
+| `fileiterator` | File processing with compression | `FUOpen`, `IterateLines`, `IterateJSONL`, `IterateCSV` |
+| `clistat` | Statistics tracking | `New`, `Hit`, `Finish` |
+| `sql` | Database utilities | `BatchInserter`, `SqlIterator`, `WildSqlQuery` |
+| Main package | General utilities | `Scale`, `Any2uint32`, `Runner`, `JobScheduler` |
+
+## Examples
+
+See the `examples/` directory for complete working examples:
+- `examples/fileiterator/` - File processing examples
+- `examples/clistat/` - Statistics tracking
+- `examples/sql/` - Database operations
 
 ## Contributing
 
