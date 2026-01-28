@@ -1,13 +1,29 @@
-package hb
+package sql
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/syslog"
+	"path/filepath"
+	"runtime"
 
 	"github.com/parf/homebase-go-lib/clistat"
 	_ "github.com/go-sql-driver/mysql"
 )
+
+// sysLogError writes error to syslog
+func sysLogError(message string) {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		log.Println("Error in syslog, ", message)
+		return
+	}
+	logwriter, _ := syslog.New(syslog.LOG_NOTICE, filepath.Base(filename))
+	if logwriter != nil {
+		logwriter.Err("go-api " + message)
+	}
+}
 
 // SqlRowProcessor is a function type for processing SQL rows
 type SqlRowProcessor func(row *sql.Rows)
@@ -21,14 +37,14 @@ func SqlIterator(connection string, sql_ string, processor SqlRowProcessor) {
 	db, e := sql.Open("mysql", connection)
 	if e != nil {
 		log.Println("SqlIterator Connection Error:", e, connection)
-		SysLogError("SqlIterator Connection Error: " + e.Error() + " " + connection)
+		sysLogError("SqlIterator Connection Error: " + e.Error() + " " + connection)
 		return
 	}
 	defer db.Close()
 	results, e := db.Query(sql_)
 	if e != nil {
 		log.Println("SqlIterator db Query Error:", e, sql_)
-		SysLogError("SqlIterator db Query Error: " + e.Error() + " " + sql_)
+		sysLogError("SqlIterator db Query Error: " + e.Error() + " " + sql_)
 		return
 	}
 	stat := clistat.New(10)

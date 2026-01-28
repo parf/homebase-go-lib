@@ -1,4 +1,4 @@
-package hb
+package sql
 
 import (
 	"database/sql"

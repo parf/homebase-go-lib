@@ -2,7 +2,48 @@
 
 The `sql` package provides utilities for working with SQL databases.
 
-## SqlExtra
+## Modules
+
+### BatchInserter - Batch SQL Inserts
+
+**WARNING**: UNSAFE - You must escape values yourself to prevent SQL injection!
+
+Efficiently insert large batches of data into SQL databases.
+
+```go
+import hbsql "github.com/parf/homebase-go-lib/sql"
+
+db, _ := sql.Open("mysql", "user:pass@tcp(host:3306)/dbname")
+defer db.Close()
+
+insert, flush := hbsql.BatchInserter(db, "users", "id, name, email", 1000)
+defer flush()
+
+for i := 0; i < 10000; i++ {
+    // WARNING: You must escape values yourself!
+    values := fmt.Sprintf("%d, \"%s\", \"%s\"", i, escapeString(name), escapeString(email))
+    insert(values)
+}
+```
+
+**Also available:** `BatchDBInserter` - Opens database connection for you.
+
+### SqlIterator - Query Iteration with Statistics
+
+Iterate over SQL query results with automatic progress tracking.
+
+```go
+import hbsql "github.com/parf/homebase-go-lib/sql"
+
+hbsql.SqlIterator("user:pass@tcp(host:3306)/db", "SELECT id, name FROM users", func(row *sql.Rows) {
+    var id int
+    var name string
+    row.Scan(&id, &name)
+    fmt.Printf("User: %d - %s\n", id, name)
+})
+```
+
+### SqlExtra - Dynamic Query Results
 
 Execute SQL SELECT statements and get results as maps.
 
