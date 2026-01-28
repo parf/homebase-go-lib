@@ -446,87 +446,7 @@ func TestIterateLines(t *testing.T) {
 	}
 }
 
-func TestLoadBinGzFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	testData := []byte("Test data for LoadBinGzFile")
-
-	// Create gzipped file
-	gzFile := filepath.Join(tmpDir, "test.gz")
-	f, _ := os.Create(gzFile)
-	gz := gzip.NewWriter(f)
-	gz.Write(testData)
-	gz.Close()
-	f.Close()
-
-	var result []byte
-	fileiterator.LoadBinGzFile(gzFile, &result)
-	if !bytes.Equal(result, testData) {
-		t.Errorf("Expected %s, got %s", testData, result)
-	}
-}
-
-func TestLoadBinZstdFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	testData := []byte("Test data for LoadBinZstdFile")
-
-	// Create zstd file
-	zstFile := filepath.Join(tmpDir, "test.zst")
-	f, _ := os.Create(zstFile)
-	zw, _ := zstd.NewWriter(f)
-	zw.Write(testData)
-	zw.Close()
-	f.Close()
-
-	var result []byte
-	fileiterator.LoadBinZstdFile(zstFile, &result)
-	if !bytes.Equal(result, testData) {
-		t.Errorf("Expected %s, got %s", testData, result)
-	}
-}
-
-func TestIterateLinesGz(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLines := []string{"Line 1", "Line 2", "Line 3"}
-
-	// Create gzipped file
-	gzFile := filepath.Join(tmpDir, "test.gz")
-	f, _ := os.Create(gzFile)
-	gz := gzip.NewWriter(f)
-	gz.Write([]byte("Line 1\nLine 2\nLine 3\n"))
-	gz.Close()
-	f.Close()
-
-	var result []string
-	fileiterator.IterateLinesGz(gzFile, func(line string) {
-		result = append(result, line)
-	})
-	if len(result) != len(testLines) {
-		t.Errorf("Expected %d lines, got %d", len(testLines), len(result))
-	}
-}
-
-func TestIterateLinesZstd(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLines := []string{"Line 1", "Line 2", "Line 3"}
-
-	// Create zstd file
-	zstFile := filepath.Join(tmpDir, "test.zst")
-	f, _ := os.Create(zstFile)
-	zw, _ := zstd.NewWriter(f)
-	zw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
-	zw.Close()
-	f.Close()
-
-	var result []string
-	fileiterator.IterateLinesZstd(zstFile, func(line string) {
-		result = append(result, line)
-	})
-	if len(result) != len(testLines) {
-		t.Errorf("Expected %d lines, got %d", len(testLines), len(result))
-	}
-}
-
-func TestLoadIDTabGzFile(t *testing.T) {
+func TestIterateIDTabFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create gzipped tab-separated file with hex IDs
@@ -539,7 +459,7 @@ func TestLoadIDTabGzFile(t *testing.T) {
 
 	var ids []int32
 	var names []string
-	fileiterator.LoadIDTabGzFile(gzFile, func(id int32, name string) {
+	fileiterator.IterateIDTabFile(gzFile, func(id int32, name string) {
 		ids = append(ids, id)
 		names = append(names, name)
 	})
