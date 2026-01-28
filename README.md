@@ -53,7 +53,7 @@ func main() {
 
 ### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.25+
 - Make (optional, for using Makefile commands)
 
 ### Building
