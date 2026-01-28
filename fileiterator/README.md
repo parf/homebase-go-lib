@@ -4,12 +4,114 @@ The `fileiterator` package provides high-level iterators for structured file for
 
 ## Features
 
+- **Binary record iterators** for fixed-size records with compression support
+- **File loaders** with automatic compression detection
 - **JSONL (JSON Lines)** support with typed and untyped parsing
 - **CSV** support with flexible options and map-based iteration
-- **Automatic compression** detection (.gz, .zst)
+- **Automatic compression** detection (.gz, .zst, .zlib)
+- **Explicit format** loaders when you need control
 - **URL support** - works with both local files and HTTP/HTTPS URLs
 - **Error handling** with detailed error messages (line/row numbers)
 - **Progress tracking** - prints row/line counts
+
+## File Loaders
+
+### Auto-Detection Loaders
+
+#### FUOpen - Open with Auto-Decompression
+
+Opens a file or URL and returns an `io.ReadCloser` with automatic decompression:
+
+```go
+import "github.com/parf/homebase-go-lib/fileiterator"
+
+// Automatically decompresses .gz and .zst files
+r := fileiterator.FUOpen("data.txt.gz")
+defer r.Close()
+data, _ := io.ReadAll(r)
+```
+
+#### LoadBinFile - Load Binary File
+
+Loads a file into a byte buffer with automatic decompression:
+
+```go
+var data []byte
+fileiterator.LoadBinFile("data.bin.gz", &data)
+fmt.Printf("Loaded %d bytes\n", len(data))
+```
+
+#### LoadLinesFile - Process Lines
+
+Process lines in a text file with automatic decompression:
+
+```go
+fileiterator.LoadLinesFile("log.txt.zst", func(line string) {
+    fmt.Println(line)
+})
+```
+
+### Explicit Format Loaders
+
+When you need explicit control over the compression format:
+
+```go
+// Gzip loaders
+var data []byte
+fileiterator.LoadBinGzFile("data.bin.gz", &data)
+fileiterator.LoadLinesGzFile("log.txt.gz", func(line string) {
+    fmt.Println(line)
+})
+
+// Zstd loaders
+fileiterator.LoadBinZstdFile("data.bin.zst", &data)
+fileiterator.LoadLinesZstdFile("log.txt.zst", func(line string) {
+    fmt.Println(line)
+})
+
+// Special: Tab-separated ID-Name pairs (hex ID)
+fileiterator.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
+    fmt.Printf("ID: %x, Name: %s\n", id, name)
+})
+```
+
+## Binary Record Iterators
+
+### IterateBinaryRecords - Auto-Detection
+
+Iterate over fixed-size binary records with automatic compression detection:
+
+```go
+// Detects .gz, .zst, .zlib/.zz extensions automatically
+fileiterator.IterateBinaryRecords("records.bin.gz", 64, func(record []byte) {
+    // Process each 64-byte record
+})
+
+// Plain binary files also supported
+fileiterator.IterateBinaryRecords("records.bin", 64, func(record []byte) {
+    // Process uncompressed records
+})
+```
+
+### Explicit Format Iterators
+
+For explicit compression format control:
+
+```go
+// Gzip
+fileiterator.IterateGzipRecords("data.bin.gz", 64, processor)
+
+// Zstd
+fileiterator.IterateZstdRecords("data.bin.zst", 64, processor)
+
+// Zlib (RFC 1950)
+fileiterator.IterateZlibRecords("data.bin.zlib", 64, processor)
+```
+
+**Use cases:**
+- Fixed-size binary records (database dumps, network packets, etc.)
+- Streaming processing of large binary files
+- Works with compressed and uncompressed files
 
 ## JSONL (JSON Lines) Support
 
@@ -202,5 +304,5 @@ All functions work with HTTP/HTTPS URLs:
 
 **Use other packages when:**
 - Need random access to file contents
-- Working with binary formats (use `compression.IterateBinaryRecords`)
+- Need SQL database operations (use `sql` package)
 - Custom parsing requirements

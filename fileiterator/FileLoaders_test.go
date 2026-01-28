@@ -180,3 +180,118 @@ func TestLoadLinesFile(t *testing.T) {
 		t.Errorf("Expected %d lines, got %d", len(testLines), len(result3))
 	}
 }
+
+func TestLoadBinGzFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testData := []byte("Test data for LoadBinGzFile")
+
+	// Create gzipped file
+	gzFile := filepath.Join(tmpDir, "test.gz")
+	f, _ := os.Create(gzFile)
+	gz := gzip.NewWriter(f)
+	gz.Write(testData)
+	gz.Close()
+	f.Close()
+
+	var result []byte
+	fileiterator.LoadBinGzFile(gzFile, &result)
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Expected %s, got %s", testData, result)
+	}
+}
+
+func TestLoadBinZstdFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testData := []byte("Test data for LoadBinZstdFile")
+
+	// Create zstd file
+	zstFile := filepath.Join(tmpDir, "test.zst")
+	f, _ := os.Create(zstFile)
+	zw, _ := zstd.NewWriter(f)
+	zw.Write(testData)
+	zw.Close()
+	f.Close()
+
+	var result []byte
+	fileiterator.LoadBinZstdFile(zstFile, &result)
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Expected %s, got %s", testData, result)
+	}
+}
+
+func TestLoadLinesGzFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testLines := []string{"Line 1", "Line 2", "Line 3"}
+
+	// Create gzipped file
+	gzFile := filepath.Join(tmpDir, "test.gz")
+	f, _ := os.Create(gzFile)
+	gz := gzip.NewWriter(f)
+	gz.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	gz.Close()
+	f.Close()
+
+	var result []string
+	fileiterator.LoadLinesGzFile(gzFile, func(line string) {
+		result = append(result, line)
+	})
+	if len(result) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result))
+	}
+}
+
+func TestLoadLinesZstdFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testLines := []string{"Line 1", "Line 2", "Line 3"}
+
+	// Create zstd file
+	zstFile := filepath.Join(tmpDir, "test.zst")
+	f, _ := os.Create(zstFile)
+	zw, _ := zstd.NewWriter(f)
+	zw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	zw.Close()
+	f.Close()
+
+	var result []string
+	fileiterator.LoadLinesZstdFile(zstFile, func(line string) {
+		result = append(result, line)
+	})
+	if len(result) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result))
+	}
+}
+
+func TestLoadIDTabGzFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create gzipped tab-separated file with hex IDs
+	gzFile := filepath.Join(tmpDir, "test.gz")
+	f, _ := os.Create(gzFile)
+	gz := gzip.NewWriter(f)
+	gz.Write([]byte("A\tFIRST\nB\tSECOND\n14\tTWENTY\n"))
+	gz.Close()
+	f.Close()
+
+	var ids []int32
+	var names []string
+	fileiterator.LoadIDTabGzFile(gzFile, func(id int32, name string) {
+		ids = append(ids, id)
+		names = append(names, name)
+	})
+
+	expectedIDs := []int32{10, 11, 20}
+	expectedNames := []string{"first", "second", "twenty"}
+
+	if len(ids) != len(expectedIDs) {
+		t.Fatalf("Expected %d entries, got %d", len(expectedIDs), len(ids))
+	}
+
+	for i := range ids {
+		if ids[i] != expectedIDs[i] {
+			t.Errorf("ID[%d]: Expected %d, got %d", i, expectedIDs[i], ids[i])
+		}
+		if names[i] != expectedNames[i] {
+			t.Errorf("Name[%d]: Expected %s, got %s", i, expectedNames[i], names[i])
+		}
+	}
+}

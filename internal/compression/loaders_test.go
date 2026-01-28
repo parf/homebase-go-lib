@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/parf/homebase-go-lib/compression"
+	"github.com/parf/homebase-go-lib/internal/compression"
 )
 
 func TestLoadBinGzFile(t *testing.T) {

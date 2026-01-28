@@ -1,8 +1,8 @@
-# Compression Package
+# Internal Compression Package
 
-The `compression` package provides explicit compression format loaders for gzip and zstd formats.
+**Note:** This is an internal package. For public API, use the `fileiterator` package which provides all file loading and iteration functionality.
 
-For automatic decompression detection, use the main `hb` package functions: `FUOpen`, `LoadBinFile`, and `LoadLinesFile`.
+The internal `compression` package contains legacy compression format loaders kept for backward compatibility within the module.
 
 ## Functions
 
@@ -13,7 +13,7 @@ For automatic decompression detection, use the main `hb` package functions: `FUO
 Load gzipped binary file explicitly.
 
 ```go
-import "github.com/parf/homebase-go-lib/compression"
+import "github.com/parf/homebase-go-lib/internal/compression"
 
 var data []byte
 compression.LoadBinGzFile("file.bin.gz", &data)
@@ -62,17 +62,17 @@ compression.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
 })
 ```
 
-## When to Use
+## Migration Notice
 
-**Use this package when:**
-- You need explicit control over the compression format
-- You're working with files that don't have standard extensions
-- You want to be explicit about the expected compression format
+**All functions from this package are now available in `fileiterator` package.**
 
-**Use main package (hb) functions when:**
-- You want automatic compression detection by file extension
-- You're processing files with standard extensions (.gz, .zst)
-- You want simpler, more convenient code
+Use `github.com/parf/homebase-go-lib/fileiterator` instead:
+- LoadBinGzFile, LoadBinZstdFile
+- LoadLinesGzFile, LoadLinesZstdFile
+- LoadIDTabGzFile
+- IterateBinaryRecords and explicit format iterators
+
+This internal package is kept for backward compatibility within the module only.
 
 ## Example
 
