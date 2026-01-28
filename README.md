@@ -46,11 +46,11 @@ func main() {
 - **LoadLinesFile**: Process text files line-by-line with auto-decompression
 
 ### Compression Package (`compression/`)
-- **BinFileIterator**: Iterate over fixed-size binary records (auto-detects: .gz, .zst, .zlib)
+- **IterateBinaryRecords**: Iterate over fixed-size binary records (auto-detects: .gz, .zst, .zlib)
 - **LoadBinGzFile** / **LoadBinZstdFile**: Explicit binary file loaders
 - **LoadLinesGzFile** / **LoadLinesZstdFile**: Explicit text file loaders
 - **LoadIDTabGzFile**: Process tab-separated gzipped files
-- **ZlibFileIterator** / **GzipFileIterator** / **ZstdFileIterator**: Binary record iterators
+- **IterateZlibRecords** / **IterateGzipRecords** / **IterateZstdRecords**: Binary record iterators
 
 **Supported Compression:** gzip (.gz), zstd (.zst), zlib (.zlib, .zz)
 

@@ -104,20 +104,20 @@ func main() {
 
 ## Binary Record Iterators
 
-### BinFileIterator(filename string, recordSize int, processor func([]byte))
+### IterateBinaryRecords(filename string, recordSize int, processor func([]byte))
 
 Iterate over fixed-size binary records with **automatic compression detection** by extension (.gz, .zst, .zlib/.zz).
 
 ```go
-compression.BinFileIterator("data.bin.gz", 10, func(record []byte) {
+compression.IterateBinaryRecords("data.bin.gz", 10, func(record []byte) {
     // process 10-byte record - automatically decompressed
 })
 
-compression.BinFileIterator("data.bin.zst", 10, func(record []byte) {
+compression.IterateBinaryRecords("data.bin.zst", 10, func(record []byte) {
     // process 10-byte record - automatically decompressed
 })
 
-compression.BinFileIterator("data.bin.zlib", 10, func(record []byte) {
+compression.IterateBinaryRecords("data.bin.zlib", 10, func(record []byte) {
     // process 10-byte record - automatically decompressed
 })
 ```
@@ -128,13 +128,13 @@ For explicit compression format control:
 
 ```go
 // Gzip
-compression.GzipFileIterator("data.bin.gz", 10, processor)
+compression.IterateGzipRecords("data.bin.gz", 10, processor)
 
 // Zstd
-compression.ZstdFileIterator("data.bin.zst", 10, processor)
+compression.IterateZstdRecords("data.bin.zst", 10, processor)
 
 // Zlib (RFC 1950)
-compression.ZlibFileIterator("data.bin.zlib", 10, processor)
+compression.IterateZlibRecords("data.bin.zlib", 10, processor)
 ```
 
 ## Supported Formats
@@ -149,5 +149,5 @@ All loaders support both local files and HTTP URLs:
 
 ```go
 compression.LoadBinGzFile("http://example.com/data.bin.gz", &data)
-compression.BinFileIterator("http://example.com/records.bin.zst", 10, processor)
+compression.IterateBinaryRecords("http://example.com/records.bin.zst", 10, processor)
 ```

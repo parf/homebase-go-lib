@@ -14,13 +14,13 @@ import (
 	"github.com/parf/homebase-go-lib/clistat"
 )
 
-// BinFileIterator iterates over a compressed file of binary records of fixed recordSize.
+// IterateBinaryRecords iterates over a compressed file of binary records of fixed recordSize.
 // Automatically detects compression format by extension: .gz (gzip), .zst (zstd), .zlib (zlib)
 // Calls processor function on every record.
 //
 // filename - "filename" or "http://url"
 // recordSize - size of each binary record in bytes
-func BinFileIterator(filename string, recordSize int, processor func([]byte)) {
+func IterateBinaryRecords(filename string, recordSize int, processor func([]byte)) {
 	var b io.Reader // base reader
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Get(filename)
@@ -81,9 +81,9 @@ func BinFileIterator(filename string, recordSize int, processor func([]byte)) {
 	stat.Finish()
 }
 
-// ZlibFileIterator iterates over zlib-compressed file of binary records (explicit zlib)
+// IterateZlibRecords iterates over zlib-compressed file of binary records (explicit zlib)
 // This is the original function for backward compatibility
-func ZlibFileIterator(filename string, recordSize int, processor func([]byte)) {
+func IterateZlibRecords(filename string, recordSize int, processor func([]byte)) {
 	var b io.Reader
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Get(filename)
@@ -124,8 +124,8 @@ func ZlibFileIterator(filename string, recordSize int, processor func([]byte)) {
 	stat.Finish()
 }
 
-// GzipFileIterator iterates over gzip-compressed file of binary records (explicit gzip)
-func GzipFileIterator(filename string, recordSize int, processor func([]byte)) {
+// IterateGzipRecords iterates over gzip-compressed file of binary records (explicit gzip)
+func IterateGzipRecords(filename string, recordSize int, processor func([]byte)) {
 	var b io.Reader
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Get(filename)
@@ -166,8 +166,8 @@ func GzipFileIterator(filename string, recordSize int, processor func([]byte)) {
 	stat.Finish()
 }
 
-// ZstdFileIterator iterates over zstd-compressed file of binary records (explicit zstd)
-func ZstdFileIterator(filename string, recordSize int, processor func([]byte)) {
+// IterateZstdRecords iterates over zstd-compressed file of binary records (explicit zstd)
+func IterateZstdRecords(filename string, recordSize int, processor func([]byte)) {
 	var b io.Reader
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Get(filename)
