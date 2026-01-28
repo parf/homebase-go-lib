@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Clistat struct {
+type CliStat struct {
 	Start   int64
 	Ltime   int64
 	Cnt     int64
@@ -17,12 +17,12 @@ type Clistat struct {
 	Timeout int64
 }
 
-func New(timeout int64) Clistat {
+func New(timeout int64) CliStat {
 	now := time.Now().Unix()
-	return Clistat{now, now, 0, 0, timeout}
+	return CliStat{now, now, 0, 0, timeout}
 }
 
-func (s *Clistat) Hit() {
+func (s *CliStat) Hit() {
 	s.Cnt++
 	// fmt.Printf("Cnt=%d", s.Cnt)
 	if s.Cnt&255 != 0 {
@@ -38,7 +38,7 @@ func (s *Clistat) Hit() {
 	}
 }
 
-func (s *Clistat) Finish() {
+func (s *CliStat) Finish() {
 	ellapsed := time.Now().Unix() - s.Start
 	log.Printf("DONE, Hits: %d, Seconds: %d\n", s.Cnt, ellapsed)
 }

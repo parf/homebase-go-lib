@@ -30,7 +30,7 @@ func main() {
 - **DumpSortedMap**: Print maps in sorted key order
 
 ### Performance & Monitoring
-- **Clistat**: CLI statistics tracker for hits per second monitoring
+- **CliStat**: CLI statistics tracker for hits per second monitoring
 - **Runner**: Parallel and sequential task runners with memory/timing stats
 - **JobScheduler**: Periodic job scheduler with start/stop control
 - **MemReport**: Memory allocation reporting

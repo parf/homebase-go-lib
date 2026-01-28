@@ -1,4 +1,4 @@
-# Clistat - CLI Statistics Tracker
+# CliStat - CLI Statistics Tracker
 
 Package clistat provides a simple statistics tracker for command-line applications to monitor hits per second (HPS) and track progress.
 
@@ -36,7 +36,7 @@ func main() {
 
 ## How It Works
 
-- **New(timeout int64)**: Creates a new Clistat tracker with the specified timeout in seconds
+- **New(timeout int64)**: Creates a new CliStat tracker with the specified timeout in seconds
 - **Hit()**: Records a hit. Progress is logged every 256 hits if the timeout has elapsed
 - **Finish()**: Prints final statistics including total hits and elapsed time
 
