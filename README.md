@@ -54,6 +54,13 @@ func main() {
 
 **Supported Compression:** gzip (.gz), zstd (.zst), zlib (.zlib, .zz)
 
+### File Iterator Package (`fileiterator/`)
+- **IterateJSONL**: Process JSON Lines files (untyped)
+- **IterateJSONLTyped**: Process JSON Lines files with type-safety
+- **IterateCSV**: Process CSV files row-by-row
+- **IterateCSVMap**: Process CSV with header as maps
+- **Supports:** Compression auto-detection, URLs (HTTP/HTTPS), custom delimiters
+
 ### Debugging & Logging
 - **Debug**: Configurable debug output (stderr or log)
 - **Syslog**: System log utilities (notice/error)
