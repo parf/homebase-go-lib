@@ -6,9 +6,11 @@ The `sql` package provides utilities for working with SQL databases.
 
 ### BatchInserter - Batch SQL Inserts
 
-**WARNING**: UNSAFE - You must escape values yourself to prevent SQL injection!
+Efficiently insert large batches of data into SQL databases with automatic escaping support.
 
-Efficiently insert large batches of data into SQL databases.
+#### Auto-Escaping Mode (Recommended - SAFE)
+
+Pass values as a slice/array and they will be automatically escaped:
 
 ```go
 import hbsql "github.com/parf/homebase-go-lib/sql"
@@ -20,10 +22,41 @@ insert, flush := hbsql.BatchInserter(db, "users", "id, name, email", 1000)
 defer flush()
 
 for i := 0; i < 10000; i++ {
-    // WARNING: You must escape values yourself!
-    values := fmt.Sprintf("%d, \"%s\", \"%s\"", i, escapeString(name), escapeString(email))
+    // SAFE: Values are automatically escaped
+    insert([]any{i, "John's Pizza", "user@example.com"})
+
+    // Also works with typed slices:
+    // insert([]string{"value1", "value2", "value3"})
+    // insert([]int{1, 2, 3})
+}
+```
+
+#### Manual Mode (Legacy - UNSAFE)
+
+Pass values as a pre-formatted string (you must escape values yourself):
+
+```go
+insert, flush := hbsql.BatchInserter(db, "users", "id, name, email", 1000)
+defer flush()
+
+for i := 0; i < 10000; i++ {
+    // UNSAFE: You must escape values yourself!
+    values := fmt.Sprintf("%d, '%s', '%s'", i, escapedName, escapedEmail)
     insert(values)
 }
+```
+
+#### EscapeValue Function
+
+For manual escaping of individual values:
+
+```go
+import hbsql "github.com/parf/homebase-go-lib/sql"
+
+// Escape a single value for SQL
+escaped := hbsql.EscapeValue("John's Pizza")  // Returns: 'John''s Pizza'
+escaped := hbsql.EscapeValue(42)              // Returns: 42
+escaped := hbsql.EscapeValue(nil)             // Returns: NULL
 ```
 
 **Also available:** `BatchDBInserter` - Opens database connection for you.
