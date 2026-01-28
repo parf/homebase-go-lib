@@ -3,6 +3,7 @@ package fileiterator
 import (
 	"bufio"
 	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,11 +12,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
+	"github.com/pierrec/lz4/v4"
+	"github.com/ulikunitz/xz"
 )
 
 // FUOpen opens a file or URL and returns an io.ReadCloser.
-// Automatically detects and decompresses .gz and .zst files based on extension.
+// Automatically detects and decompresses files based on extension:
+// .gz (gzip), .zst (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
 func FUOpen(file_or_url string) io.ReadCloser {
 	var base io.ReadCloser
 
@@ -52,6 +57,26 @@ func FUOpen(file_or_url string) io.ReadCloser {
 			panic(err)
 		}
 		return &zstdReadCloser{decoder: zr, base: base}
+	} else if strings.HasSuffix(file_or_url, ".zlib") || strings.HasSuffix(file_or_url, ".zz") {
+		zr, err := zlib.NewReader(base)
+		if err != nil {
+			base.Close()
+			panic(err)
+		}
+		return &combinedCloser{Reader: zr, closers: []io.Closer{zr, base}}
+	} else if strings.HasSuffix(file_or_url, ".lz4") {
+		lzr := lz4.NewReader(base)
+		return &simpleReadCloser{Reader: lzr, base: base}
+	} else if strings.HasSuffix(file_or_url, ".br") {
+		brr := brotli.NewReader(base)
+		return &simpleReadCloser{Reader: brr, base: base}
+	} else if strings.HasSuffix(file_or_url, ".xz") {
+		xzr, err := xz.NewReader(base)
+		if err != nil {
+			base.Close()
+			panic(err)
+		}
+		return &simpleReadCloser{Reader: xzr, base: base}
 	}
 
 	return base
@@ -88,7 +113,18 @@ func (z *zstdReadCloser) Close() error {
 	return z.base.Close()
 }
 
-// LoadBinFile loads a file (with automatic decompression if .gz or .zst) into a byte buffer
+// simpleReadCloser wraps an io.Reader with a base closer
+type simpleReadCloser struct {
+	io.Reader
+	base io.ReadCloser
+}
+
+func (s *simpleReadCloser) Close() error {
+	return s.base.Close()
+}
+
+// LoadBinFile loads a file with automatic decompression into a byte buffer
+// Supported: .gz (gzip), .zst (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
 func LoadBinFile(filename string, dest *[]byte) {
 	fi := FUOpen(filename) // FUOpen handles compression automatically
 	defer fi.Close()
@@ -100,7 +136,8 @@ func LoadBinFile(filename string, dest *[]byte) {
 	fmt.Printf("File %s loaded. %d bytes\n", filename, len(*dest))
 }
 
-// IterateLines processes lines in a file (with automatic decompression if .gz or .zst)
+// IterateLines processes lines in a file with automatic decompression
+// Supported: .gz (gzip), .zst (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
 func IterateLines(filename string, processor func(string)) {
 	fi := FUOpen(filename) // FUOpen handles compression automatically
 	defer fi.Close()

@@ -3,13 +3,18 @@ package fileiterator_test
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
+	"github.com/pierrec/lz4/v4"
 	"github.com/parf/homebase-go-lib/fileiterator"
+	"github.com/ulikunitz/xz"
 )
 
 func TestFUOpenPlainFile(t *testing.T) {
@@ -95,6 +100,154 @@ func TestFUOpenZstdFile(t *testing.T) {
 	}
 }
 
+func TestFUOpenZlibFile(t *testing.T) {
+	// Create temp zlib file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.zlib")
+	testData := []byte("Hello, Zlib!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	zw := zlib.NewWriter(f)
+	zw.Write(testData)
+	zw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := fileiterator.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenZzFile(t *testing.T) {
+	// Create temp .zz file (zlib with .zz extension)
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.zz")
+	testData := []byte("Hello, Zlib (.zz)!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	zw := zlib.NewWriter(f)
+	zw.Write(testData)
+	zw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := fileiterator.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenLz4File(t *testing.T) {
+	// Create temp lz4 file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.lz4")
+	testData := []byte("Hello, LZ4!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	lzw := lz4.NewWriter(f)
+	lzw.Write(testData)
+	lzw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := fileiterator.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenBrotliFile(t *testing.T) {
+	// Create temp brotli file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.br")
+	testData := []byte("Hello, Brotli!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	brw := brotli.NewWriter(f)
+	brw.Write(testData)
+	brw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := fileiterator.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
+func TestFUOpenXzFile(t *testing.T) {
+	// Create temp xz file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.xz")
+	testData := []byte("Hello, XZ!")
+
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	xzw, err := xz.NewWriter(f)
+	if err != nil {
+		t.Fatalf("Failed to create xz writer: %v", err)
+	}
+	xzw.Write(testData)
+	xzw.Close()
+	f.Close()
+
+	// Test FUOpen with automatic decompression
+	r := fileiterator.FUOpen(testFile)
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(data, testData) {
+		t.Errorf("Expected %s, got %s", testData, data)
+	}
+}
+
 func TestLoadBinFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	testData := []byte("Test data for LoadBinFile")
@@ -132,6 +285,58 @@ func TestLoadBinFile(t *testing.T) {
 	fileiterator.LoadBinFile(zstFile, &result3)
 	if !bytes.Equal(result3, testData) {
 		t.Errorf("Zstd file: Expected %s, got %s", testData, result3)
+	}
+
+	// Test zlib file
+	zlibFile := filepath.Join(tmpDir, "test.txt.zlib")
+	f3, _ := os.Create(zlibFile)
+	zlibw := zlib.NewWriter(f3)
+	zlibw.Write(testData)
+	zlibw.Close()
+	f3.Close()
+	var result4 []byte
+	fileiterator.LoadBinFile(zlibFile, &result4)
+	if !bytes.Equal(result4, testData) {
+		t.Errorf("Zlib file: Expected %s, got %s", testData, result4)
+	}
+
+	// Test lz4 file
+	lz4File := filepath.Join(tmpDir, "test.txt.lz4")
+	f4, _ := os.Create(lz4File)
+	lz4w := lz4.NewWriter(f4)
+	lz4w.Write(testData)
+	lz4w.Close()
+	f4.Close()
+	var result5 []byte
+	fileiterator.LoadBinFile(lz4File, &result5)
+	if !bytes.Equal(result5, testData) {
+		t.Errorf("LZ4 file: Expected %s, got %s", testData, result5)
+	}
+
+	// Test brotli file
+	brFile := filepath.Join(tmpDir, "test.txt.br")
+	f5, _ := os.Create(brFile)
+	brw := brotli.NewWriter(f5)
+	brw.Write(testData)
+	brw.Close()
+	f5.Close()
+	var result6 []byte
+	fileiterator.LoadBinFile(brFile, &result6)
+	if !bytes.Equal(result6, testData) {
+		t.Errorf("Brotli file: Expected %s, got %s", testData, result6)
+	}
+
+	// Test xz file
+	xzFile := filepath.Join(tmpDir, "test.txt.xz")
+	f6, _ := os.Create(xzFile)
+	xzw, _ := xz.NewWriter(f6)
+	xzw.Write(testData)
+	xzw.Close()
+	f6.Close()
+	var result7 []byte
+	fileiterator.LoadBinFile(xzFile, &result7)
+	if !bytes.Equal(result7, testData) {
+		t.Errorf("XZ file: Expected %s, got %s", testData, result7)
 	}
 }
 
@@ -178,6 +383,66 @@ func TestIterateLines(t *testing.T) {
 	})
 	if len(result3) != len(testLines) {
 		t.Errorf("Expected %d lines, got %d", len(testLines), len(result3))
+	}
+
+	// Test zlib file
+	zlibFile := filepath.Join(tmpDir, "test.txt.zlib")
+	f4, _ := os.Create(zlibFile)
+	zlibw := zlib.NewWriter(f4)
+	zlibw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	zlibw.Close()
+	f4.Close()
+	var result4 []string
+	fileiterator.IterateLines(zlibFile, func(line string) {
+		result4 = append(result4, line)
+	})
+	if len(result4) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result4))
+	}
+
+	// Test lz4 file
+	lz4File := filepath.Join(tmpDir, "test.txt.lz4")
+	f5, _ := os.Create(lz4File)
+	lz4w := lz4.NewWriter(f5)
+	lz4w.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	lz4w.Close()
+	f5.Close()
+	var result5 []string
+	fileiterator.IterateLines(lz4File, func(line string) {
+		result5 = append(result5, line)
+	})
+	if len(result5) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result5))
+	}
+
+	// Test brotli file
+	brFile := filepath.Join(tmpDir, "test.txt.br")
+	f6, _ := os.Create(brFile)
+	brw := brotli.NewWriter(f6)
+	brw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	brw.Close()
+	f6.Close()
+	var result6 []string
+	fileiterator.IterateLines(brFile, func(line string) {
+		result6 = append(result6, line)
+	})
+	if len(result6) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result6))
+	}
+
+	// Test xz file
+	xzFile := filepath.Join(tmpDir, "test.txt.xz")
+	f7, _ := os.Create(xzFile)
+	xzw, _ := xz.NewWriter(f7)
+	io.WriteString(xzw, "Line 1\nLine 2\nLine 3\n")
+	xzw.Close()
+	f7.Close()
+	var result7 []string
+	fileiterator.IterateLines(xzFile, func(line string) {
+		result7 = append(result7, line)
+	})
+	if len(result7) != len(testLines) {
+		t.Errorf("Expected %d lines, got %d", len(testLines), len(result7))
 	}
 }
 
