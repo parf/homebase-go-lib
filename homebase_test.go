@@ -1,13 +1,13 @@
-package homebase_test
+package hb_test
 
 import (
 	"testing"
 
-	"github.com/parf/homebase-go-lib"
+	hb "github.com/parf/homebase-go-lib"
 )
 
 func TestVersion(t *testing.T) {
-	if homebase.Version == "" {
+	if hb.Version == "" {
 		t.Error("Version should not be empty")
 	}
 }
