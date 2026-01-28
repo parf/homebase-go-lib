@@ -1,4 +1,4 @@
-package hb_test
+package fileiterator_test
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	hb "github.com/parf/homebase-go-lib"
 	"github.com/klauspost/compress/zstd"
+	"github.com/parf/homebase-go-lib/fileiterator"
 )
 
 func TestFUOpenPlainFile(t *testing.T) {
@@ -24,7 +24,7 @@ func TestFUOpenPlainFile(t *testing.T) {
 	}
 
 	// Test FUOpen
-	r := hb.FUOpen(testFile)
+	r := fileiterator.FUOpen(testFile)
 	defer r.Close()
 
 	data, err := ioutil.ReadAll(r)
@@ -53,7 +53,7 @@ func TestFUOpenGzipFile(t *testing.T) {
 	f.Close()
 
 	// Test FUOpen with automatic decompression
-	r := hb.FUOpen(testFile)
+	r := fileiterator.FUOpen(testFile)
 	defer r.Close()
 
 	data, err := ioutil.ReadAll(r)
@@ -82,7 +82,7 @@ func TestFUOpenZstdFile(t *testing.T) {
 	f.Close()
 
 	// Test FUOpen with automatic decompression
-	r := hb.FUOpen(testFile)
+	r := fileiterator.FUOpen(testFile)
 	defer r.Close()
 
 	data, err := ioutil.ReadAll(r)
@@ -103,7 +103,7 @@ func TestLoadBinFile(t *testing.T) {
 	plainFile := filepath.Join(tmpDir, "plain.txt")
 	ioutil.WriteFile(plainFile, testData, 0644)
 	var result1 []byte
-	hb.LoadBinFile(plainFile, &result1)
+	fileiterator.LoadBinFile(plainFile, &result1)
 	if !bytes.Equal(result1, testData) {
 		t.Errorf("Plain file: Expected %s, got %s", testData, result1)
 	}
@@ -116,7 +116,7 @@ func TestLoadBinFile(t *testing.T) {
 	gz.Close()
 	f.Close()
 	var result2 []byte
-	hb.LoadBinFile(gzFile, &result2)
+	fileiterator.LoadBinFile(gzFile, &result2)
 	if !bytes.Equal(result2, testData) {
 		t.Errorf("Gzip file: Expected %s, got %s", testData, result2)
 	}
@@ -129,7 +129,7 @@ func TestLoadBinFile(t *testing.T) {
 	zw.Close()
 	f2.Close()
 	var result3 []byte
-	hb.LoadBinFile(zstFile, &result3)
+	fileiterator.LoadBinFile(zstFile, &result3)
 	if !bytes.Equal(result3, testData) {
 		t.Errorf("Zstd file: Expected %s, got %s", testData, result3)
 	}
@@ -143,7 +143,7 @@ func TestLoadLinesFile(t *testing.T) {
 	plainFile := filepath.Join(tmpDir, "plain.txt")
 	ioutil.WriteFile(plainFile, []byte("Line 1\nLine 2\nLine 3\n"), 0644)
 	var result1 []string
-	hb.LoadLinesFile(plainFile, func(line string) {
+	fileiterator.LoadLinesFile(plainFile, func(line string) {
 		result1 = append(result1, line)
 	})
 	if len(result1) != len(testLines) {
@@ -158,7 +158,7 @@ func TestLoadLinesFile(t *testing.T) {
 	gz.Close()
 	f.Close()
 	var result2 []string
-	hb.LoadLinesFile(gzFile, func(line string) {
+	fileiterator.LoadLinesFile(gzFile, func(line string) {
 		result2 = append(result2, line)
 	})
 	if len(result2) != len(testLines) {
@@ -173,7 +173,7 @@ func TestLoadLinesFile(t *testing.T) {
 	zw.Close()
 	f2.Close()
 	var result3 []string
-	hb.LoadLinesFile(zstFile, func(line string) {
+	fileiterator.LoadLinesFile(zstFile, func(line string) {
 		result3 = append(result3, line)
 	})
 	if len(result3) != len(testLines) {

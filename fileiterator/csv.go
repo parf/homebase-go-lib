@@ -4,8 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-
-	hb "github.com/parf/homebase-go-lib"
 )
 
 // CSVOptions configures CSV parsing behavior
@@ -41,7 +39,7 @@ func DefaultCSVOptions() CSVOptions {
 //	    return nil
 //	})
 func IterateCSV(filename string, opts CSVOptions, processor func([]string) error) error {
-	fi := hb.FUOpen(filename) // Auto-detects compression
+	fi := FUOpen(filename) // Auto-detects compression
 	defer fi.Close()
 
 	reader := csv.NewReader(fi)
@@ -98,7 +96,7 @@ func IterateCSV(filename string, opts CSVOptions, processor func([]string) error
 //	    return nil
 //	})
 func IterateCSVMap(filename string, opts CSVOptions, processor func(map[string]string) error) error {
-	fi := hb.FUOpen(filename) // Auto-detects compression
+	fi := FUOpen(filename) // Auto-detects compression
 	defer fi.Close()
 
 	reader := csv.NewReader(fi)

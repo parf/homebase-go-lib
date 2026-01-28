@@ -1,4 +1,4 @@
-package compression_test
+package fileiterator_test
 
 import (
 	"compress/gzip"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/parf/homebase-go-lib/compression"
+	"github.com/parf/homebase-go-lib/fileiterator"
 )
 
 func TestIterateBinaryRecordsPlain(t *testing.T) {
@@ -24,7 +24,7 @@ func TestIterateBinaryRecordsPlain(t *testing.T) {
 
 	// Iterate over records
 	count := 0
-	compression.IterateBinaryRecords(testFile, 10, func(record []byte) {
+	fileiterator.IterateBinaryRecords(testFile, 10, func(record []byte) {
 		count++
 		if len(record) != 10 {
 			t.Errorf("Expected record size 10, got %d", len(record))
@@ -50,7 +50,7 @@ func TestIterateBinaryRecordsGzip(t *testing.T) {
 
 	// Iterate over records
 	count := 0
-	compression.IterateBinaryRecords(testFile, 5, func(record []byte) {
+	fileiterator.IterateBinaryRecords(testFile, 5, func(record []byte) {
 		count++
 		if len(record) != 5 {
 			t.Errorf("Expected record size 5, got %d", len(record))
@@ -76,7 +76,7 @@ func TestIterateBinaryRecordsZstd(t *testing.T) {
 
 	// Iterate over records
 	count := 0
-	compression.IterateBinaryRecords(testFile, 8, func(record []byte) {
+	fileiterator.IterateBinaryRecords(testFile, 8, func(record []byte) {
 		count++
 		if len(record) != 8 {
 			t.Errorf("Expected record size 8, got %d", len(record))
@@ -102,7 +102,7 @@ func TestIterateBinaryRecordsZlib(t *testing.T) {
 
 	// Iterate over records
 	count := 0
-	compression.IterateBinaryRecords(testFile, 6, func(record []byte) {
+	fileiterator.IterateBinaryRecords(testFile, 6, func(record []byte) {
 		count++
 		if len(record) != 6 {
 			t.Errorf("Expected record size 6, got %d", len(record))

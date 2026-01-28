@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	hb "github.com/parf/homebase-go-lib"
+	"github.com/parf/homebase-go-lib/fileiterator"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	defer os.Remove(testFile)
 
 	// Open plain file
-	r := hb.FUOpen(testFile)
+	r := fileiterator.FUOpen(testFile)
 	fmt.Printf("Opened: %s\n", testFile)
 	r.Close()
 	fmt.Println()
@@ -40,7 +40,7 @@ func main() {
 	fmt.Println("Example 2: LoadBinFile with automatic decompression")
 	fmt.Println("----------------------------------------------------")
 	var data []byte
-	hb.LoadBinFile(testFile, &data)
+	fileiterator.LoadBinFile(testFile, &data)
 	fmt.Printf("Loaded %d bytes: %s\n", len(data), string(data))
 	fmt.Println()
 
@@ -48,7 +48,7 @@ func main() {
 	fmt.Println("Example 3: LoadLinesFile with automatic decompression")
 	fmt.Println("------------------------------------------------------")
 	lineCount := 0
-	hb.LoadLinesFile(testFile, func(line string) {
+	fileiterator.LoadLinesFile(testFile, func(line string) {
 		lineCount++
 		fmt.Printf("Line %d: %s\n", lineCount, line)
 	})

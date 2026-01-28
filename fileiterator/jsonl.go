@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-
-	hb "github.com/parf/homebase-go-lib"
 )
 
 // IterateJSONL processes a JSONL (JSON Lines) file line by line.
@@ -22,7 +20,7 @@ import (
 //	    return nil
 //	})
 func IterateJSONL(filename string, processor func(map[string]any) error) error {
-	fi := hb.FUOpen(filename) // Auto-detects compression
+	fi := FUOpen(filename) // Auto-detects compression
 	defer fi.Close()
 
 	scanner := bufio.NewScanner(fi)
@@ -73,7 +71,7 @@ func IterateJSONL(filename string, processor func(map[string]any) error) error {
 //	    return nil
 //	})
 func IterateJSONLTyped[T any](filename string, processor func(T) error) error {
-	fi := hb.FUOpen(filename) // Auto-detects compression
+	fi := FUOpen(filename) // Auto-detects compression
 	defer fi.Close()
 
 	scanner := bufio.NewScanner(fi)

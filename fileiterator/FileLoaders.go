@@ -1,4 +1,4 @@
-package hb
+package fileiterator
 
 import (
 	"bufio"
