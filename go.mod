@@ -1,6 +1,6 @@
 module github.com/parf/homebase-go-lib
 
-go 1.25.6
+go 1.25
 
 require github.com/go-sql-driver/mysql v1.9.3
 
