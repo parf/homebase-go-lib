@@ -14,28 +14,33 @@ import (
 	"github.com/parf/homebase-go-lib/clistat"
 )
 
-// IterateBinaryRecords iterates over a compressed file of binary records of fixed recordSize.
-// Automatically detects compression format by extension: .gz (gzip), .zst (zstd), .zlib (zlib)
+// IterateBinaryRecords iterates over a file of binary records of fixed recordSize.
+// Automatically detects compression format by extension: .gz (gzip), .zst (zstd), .zlib/.zz (zlib)
+// If no compression extension is detected, processes file as plain binary.
 // Calls processor function on every record.
 //
 // filename - "filename" or "http://url"
 // recordSize - size of each binary record in bytes
 func IterateBinaryRecords(filename string, recordSize int, processor func([]byte)) {
 	var b io.Reader // base reader
+	var closer io.Closer
+
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Get(filename)
 		if err != nil {
 			panic(err)
 		}
 		b = resp.Body
+		closer = resp.Body
 	} else {
 		f, err := os.Open(filename)
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
 		b = bufio.NewReader(f)
+		closer = f
 	}
+	defer closer.Close()
 
 	// Detect compression by extension
 	var r io.Reader
@@ -59,7 +64,7 @@ func IterateBinaryRecords(filename string, recordSize int, processor func([]byte
 			panic(err)
 		}
 	} else {
-		// No compression
+		// No compression - plain binary file
 		r = b
 	}
 
