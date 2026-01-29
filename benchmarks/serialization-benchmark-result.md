@@ -140,31 +140,37 @@ Why FlatBuffer? Zero-copy deserialization = 2-10x faster reads!
 
 ---
 
-## Combined Size & Performance Comparison
+## Combined Size & Performance Comparison - Sorted by READ SPEED (Fastest First) 🚀
 
-| Format | Size (MB) | Write (s) | Read (s) | Total (s) | Compression % |
-|--------|-----------|-----------|----------|-----------|---------------|
-| **JSONL Plain** | 145.56 | 1.33 | 1.88 | 3.21 | 0% |
-| JSONL Gzip | 8.11 | 1.27 | 1.90 | 3.18 | 94.4% |
-| **JSONL Zstd-1** | **2.47** | **0.44** | **1.79** | **2.23** | **98.3%** |
-| JSONL Zstd-2 | 2.59 | 0.43 | 1.83 | 2.26 | 98.2% |
-| JSONL Zstd | 2.59 | 0.44 | 1.80 | 2.24 | 98.2% |
-| JSONL LZ4 | 16.37 | 0.50 | 1.83 | 2.33 | 88.8% |
-| JSONL Brotli | 1.95 | 1.97 | 1.85 | 3.82 | 98.7% |
-| JSONL XZ | 4.09 | 3.18 | 5.21 | 8.39 | 97.2% |
-| **MsgPack Plain** | 114.44 | 21.81 | **0.53** | 22.34 | 0% |
-| MsgPack Gzip | 10.69 | 1.90 | 0.64 | 2.53 | 90.7% |
-| **MsgPack Zstd-1** | **5.67** | **0.65** | **0.56** | **1.20** | **95.0%** |
-| MsgPack Zstd-2 | 7.64 | 0.64 | 0.55 | 1.19 | 93.3% |
-| MsgPack Zstd | 7.64 | 0.64 | 0.56 | 1.20 | 93.3% |
-| MsgPack LZ4 | 17.67 | 0.66 | 0.57 | 1.23 | 84.6% |
-| MsgPack Brotli | 3.21 | 2.69 | 0.63 | 3.32 | 97.2% |
-| **MsgPack XZ** | **0.94** | 3.33 | 1.49 | 4.82 | **99.2%** |
-| **FlatBuffer Plain** | 150.17 | **0.64** | **0.07** | **0.71** | 0% |
-| **FlatBuffer LZ4** | 16.53 | 0.65 | 0.21 | **0.86** | 89.0% |
-| FlatBuffer Zstd-1 | 2.74 | 0.72 | 0.27 | 0.98 | 98.2% |
-| FlatBuffer Zstd-2 | 2.62 | 0.73 | 0.28 | 1.01 | 98.3% |
-| FlatBuffer Zstd | 2.62 | 0.73 | 0.28 | 1.02 | 98.3% |
+| Format | Read (s) | Total (s) | Size (MB) | Write (s) | Compression % |
+|--------|----------|-----------|-----------|-----------|---------------|
+| **🥇 FlatBuffer Plain** | **0.07** 🚀 | 0.71 | 150.17 | 0.64 | 0% |
+| **🥈 FlatBuffer + LZ4** | **0.21** 🏆 | 0.86 | 16.53 | 0.65 | 89.0% |
+| **🥉 FlatBuffer + Zstd-1** | **0.27** ⚡ | 0.98 | 2.74 | 0.72 | 98.2% |
+| **FlatBuffer + Zstd-2** | **0.28** ⭐ | 1.01 | 2.62 | 0.73 | 98.3% |
+| FlatBuffer + Zstd | 0.28 | 1.02 | 2.62 | 0.73 | 98.3% |
+| MsgPack Plain | 0.53 | 22.34 | 114.44 | 21.81 | 0% ⚠️ |
+| MsgPack + Zstd-2 | 0.55 | 1.19 | 7.64 | 0.64 | 93.3% |
+| **MsgPack + Zstd-1** | 0.56 | 1.20 | 5.67 | 0.65 | 95.0% |
+| MsgPack + Zstd | 0.56 | 1.20 | 7.64 | 0.64 | 93.3% |
+| MsgPack + LZ4 | 0.57 | 1.23 | 17.67 | 0.66 | 84.6% |
+| MsgPack + Brotli | 0.63 | 3.32 | 3.21 | 2.69 | 97.2% |
+| MsgPack + Gzip | 0.64 | 2.53 | 10.69 | 1.90 | 90.7% |
+| **MsgPack + XZ** | 1.49 | 4.82 | **0.94** 📦 | 3.33 | **99.2%** |
+| **JSONL + Zstd-1** | 1.79 | 2.23 | 2.47 | 0.44 | 98.3% |
+| JSONL + Zstd | 1.80 | 2.24 | 2.59 | 0.44 | 98.2% |
+| JSONL + Zstd-2 | 1.83 | 2.26 | 2.59 | **0.43** | 98.2% |
+| JSONL + LZ4 | 1.83 | 2.33 | 16.37 | 0.50 | 88.8% |
+| JSONL + Brotli | 1.85 | 3.82 | 1.95 | 1.97 | 98.7% |
+| JSONL Plain | 1.88 | 3.21 | 145.56 | 1.33 | 0% |
+| JSONL + Gzip | 1.90 | 3.18 | 8.11 | 1.27 | 94.4% |
+| JSONL + XZ | 5.21 | 8.39 | 4.09 | 3.18 | 97.2% |
+
+**🚀 READ SPEED ADVANTAGE:**
+- **FlatBuffer formats are 2-10x faster for reads** due to zero-copy deserialization
+- FlatBuffer Plain: 0.07s read (10x faster than MsgPack, 25x faster than JSONL)
+- FlatBuffer + LZ4: 0.21s read (3x faster than MsgPack, 8x faster than JSONL) 🏆
+- FlatBuffer + Zstd-2: 0.28s read (2x faster than MsgPack, 6x faster than JSONL) ⭐
 
 ### Analysis
 - **Fastest Overall:** FlatBuffer Plain (0.71s total, 0.07s read)
@@ -281,17 +287,17 @@ Why FlatBuffer? Zero-copy deserialization = 2-10x faster reads!
 | **Gzip** | JSONL | 8.11 | 94.4% |
 | **LZ4** | JSONL | 16.37 | 88.8% |
 
-### Speed vs Compression Trade-offs
+### Speed vs Compression Trade-offs - Sorted by Total Time
 
-| Category | Format | Write (s) | Read (s) | Total (s) | Size (MB) | Notes |
-|----------|--------|-----------|----------|-----------|-----------|-------|
-| **Best Overall** | MsgPack + Zstd-1 | 0.65 | 0.56 | 1.20 | 5.67 | Best balance ✓ |
-| **Fastest** | FlatBuffer Plain | 0.64 | 0.07 | 0.71 | 150.17 | Zero-copy reads |
-| **Fast + Compressed** | FlatBuffer + LZ4 | 0.65 | 0.21 | 0.86 | 16.53 | Recommended ✓ |
-| **Fast Write** | JSONL + Zstd-2 | 0.43 | 1.83 | 2.26 | 2.59 | Fastest write |
-| **Fast Read** | FlatBuffer Plain | 0.64 | 0.07 | 0.71 | 150.17 | Zero-copy |
-| **Best Compression** | MsgPack + XZ | 3.33 | 1.49 | 4.82 | 0.94 | 99.2% reduction |
-| **Small + Fast** | MsgPack + Zstd-1 | 0.65 | 0.56 | 1.20 | 5.67 | Recommended ✓ |
+| Rank | Format | Read (s) | Total (s) | Write (s) | Size (MB) | Use Case |
+|------|--------|----------|-----------|-----------|-----------|----------|
+| **🥇** | **FlatBuffer Plain** | **0.07** 🚀 | **0.71** | 0.64 | 150.17 | Absolute fastest |
+| **🥈** | **FlatBuffer + LZ4** | **0.21** 🏆 | **0.86** | 0.65 | 16.53 | **Best compressed** |
+| **🥉** | **FlatBuffer + Zstd-2** | **0.28** ⭐ | **1.01** | 0.73 | 2.62 | Small + fast reads |
+| 4 | MsgPack + Zstd-1 | 0.56 | 1.20 | 0.65 | 5.67 | Best non-FlatBuffer |
+| 5 | JSONL + Zstd-1 | 1.79 | 2.23 | 0.44 | 2.47 | Best human-readable |
+| 6 | JSONL + Zstd-2 | 1.83 | 2.26 | **0.43** | 2.59 | Fastest write |
+| 7 | MsgPack + XZ | 1.49 | 4.82 | 3.33 | **0.94** 📦 | Smallest file |
 
 ---
 
