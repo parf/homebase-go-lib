@@ -13,13 +13,19 @@ This benchmark compares different serialization formats (JSONL, MessagePack, Fla
 
 ## Key Findings
 
-🏆 **Best Overall:** MsgPack + Zstd-1 (1.20s total, 5.67 MB, 95% compression)
-⚡ **Fastest Overall:** FlatBuffer Plain (0.71s total, 150 MB)
-⚡ **Fastest with Compression:** FlatBuffer + LZ4 (0.86s total, 16.53 MB, 89% compression)
-⚡ **Fastest Write:** JSONL + Zstd-2 (0.43s)
-⚡ **Fastest Read:** FlatBuffer Plain (0.07s - zero-copy)
-📦 **Best Compression:** MsgPack + XZ (0.94 MB, 99.2% reduction, 4.82s total)
-💡 **New Discovery:** Zstd-1 (level 1) is faster AND produces smaller files than default Zstd!
+- 🏆 **Best Overall:** MsgPack + Zstd-1 (1.20s total, 5.67 MB, 95% compression)
+
+- ⚡ **Fastest Overall:** FlatBuffer Plain (0.71s total, 150 MB)
+
+- ⚡ **Fastest with Compression:** FlatBuffer + LZ4 (0.86s total, 16.53 MB, 89% compression)
+
+- ⚡ **Fastest Write:** JSONL + Zstd-2 (0.43s)
+
+- ⚡ **Fastest Read:** FlatBuffer Plain (0.07s - zero-copy)
+
+- 📦 **Best Compression:** MsgPack + XZ (0.94 MB, 99.2% reduction, 4.82s total)
+
+- 💡 **New Discovery:** Zstd-1 (level 1) is faster AND produces smaller files than default Zstd!
 
 ---
 
