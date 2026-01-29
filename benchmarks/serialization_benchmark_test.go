@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/apache/arrow/go/v14/arrow"
 	"github.com/apache/arrow/go/v14/arrow/array"
@@ -37,19 +38,21 @@ const (
 
 var testDataset []TestRecord
 
-// Generate test dataset once
+// Generate test dataset once using gofakeit for realistic data
 func init() {
+	gofakeit.Seed(12345) // Fixed seed for reproducible benchmarks
+
 	testDataset = make([]TestRecord, numRecords)
 	for i := 0; i < numRecords; i++ {
 		testDataset[i] = TestRecord{
 			ID:        int64(i),
-			Name:      "User Name " + string(rune(i%100)),
-			Email:     "user" + string(rune(i%100)) + "@example.com",
-			Age:       20 + (i % 60),
-			Score:     float64(i%100) + 0.5,
-			Active:    i%2 == 0,
-			Category:  "Category" + string(rune(i%10)),
-			Timestamp: 1640000000 + int64(i),
+			Name:      gofakeit.Name(),
+			Email:     gofakeit.Email(),
+			Age:       gofakeit.Number(18, 80),
+			Score:     gofakeit.Float64Range(0, 100),
+			Active:    gofakeit.Bool(),
+			Category:  gofakeit.RandomString([]string{"Electronics", "Books", "Clothing", "Food", "Sports", "Toys", "Home", "Garden", "Health", "Beauty"}),
+			Timestamp: gofakeit.Date().Unix(),
 		}
 	}
 }

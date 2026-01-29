@@ -18,6 +18,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/apache/thrift v0.17.0 // indirect
+	github.com/brianvoe/gofakeit/v7 v7.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/asmfmt v1.3.2 // indirect
