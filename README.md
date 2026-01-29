@@ -9,6 +9,8 @@
 
 A comprehensive toolkit for building data pipelines, ETL workflows, and command-line tools in Go. Features universal file processing with 7 compression formats, structured data iteration (CSV, JSON Lines, Parquet, MsgPack), and production-ready utilities.
 
+> **📢 Note:** This library represents the beginning of open-sourcing minor components from **parf's proprietary Homebase framework**. The Homebase framework has been battle-tested in production environments processing petabytes of data. We're gradually sharing foundational utilities that can benefit the broader Go and data engineering community while keeping core business logic proprietary.
+
 ---
 
 ## 🌟 Key Features
