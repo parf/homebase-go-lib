@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 
 	flatbuffers "github.com/google/flatbuffers/go"
+	"github.com/apache/arrow/go/v14/arrow/array"
+	"github.com/apache/arrow/go/v14/arrow/memory"
 	"github.com/apache/arrow/go/v14/parquet/file"
+	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 	"github.com/parf/homebase-go-lib/fileiterator"
 )
 
@@ -38,28 +42,75 @@ func main() {
 	}
 	defer pf.Close()
 
-	// Read parquet records and convert to FlatBuffer
-	records := make([][]byte, 0)
+	// Create Arrow reader
+	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{}, memory.NewGoAllocator())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating Arrow reader: %v\n", err)
+		os.Exit(1)
+	}
 
-	// Get reader for all row groups
-	reader := file.NewParquetReader(pf)
-	numRows := reader.NumRows()
+	// Read table
+	tbl, err := reader.ReadTable(context.Background())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading table: %v\n", err)
+		os.Exit(1)
+	}
+	defer tbl.Release()
 
+	numRows := tbl.NumRows()
 	fmt.Printf("Reading %d rows from parquet file...\n", numRows)
 
-	// Read all rows
-	for i := int64(0); i < numRows; i++ {
-		// Read row as map
-		row, err := reader.ReadRow()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading row %d: %v\n", i, err)
-			os.Exit(1)
+	// Convert to FlatBuffer records
+	records := make([][]byte, 0, numRows)
+
+	// Get column names
+	schema := tbl.Schema()
+	fieldNames := make([]string, schema.NumFields())
+	for i := 0; i < schema.NumFields(); i++ {
+		fieldNames[i] = schema.Field(i).Name
+	}
+
+	// Process each row
+	for rowIdx := int64(0); rowIdx < numRows; rowIdx++ {
+		row := make(map[string]interface{})
+
+		// Extract values from each column
+		for colIdx := 0; colIdx < int(tbl.NumCols()); colIdx++ {
+			col := tbl.Column(colIdx)
+			fieldName := fieldNames[colIdx]
+
+			// Get value from the first chunk (assume single chunk for simplicity)
+			if col.Len() == 0 {
+				continue
+			}
+
+			chunk := col.Data().Chunk(0)
+
+			// Handle different Arrow types
+			switch arr := chunk.(type) {
+			case *array.Int64:
+				if !arr.IsNull(int(rowIdx)) {
+					row[fieldName] = arr.Value(int(rowIdx))
+				}
+			case *array.Float64:
+				if !arr.IsNull(int(rowIdx)) {
+					row[fieldName] = arr.Value(int(rowIdx))
+				}
+			case *array.String:
+				if !arr.IsNull(int(rowIdx)) {
+					row[fieldName] = arr.Value(int(rowIdx))
+				}
+			case *array.Boolean:
+				if !arr.IsNull(int(rowIdx)) {
+					row[fieldName] = arr.Value(int(rowIdx))
+				}
+			}
 		}
 
 		// Convert row to JSON
 		jsonData, err := json.Marshal(row)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling row %d: %v\n", i, err)
+			fmt.Fprintf(os.Stderr, "Error marshaling row %d: %v\n", rowIdx, err)
 			os.Exit(1)
 		}
 
