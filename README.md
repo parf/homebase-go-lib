@@ -1,6 +1,6 @@
 # homebase-go-lib
 
-A comprehensive Go library for file processing, database operations, and system utilities with extensive compression support.
+A comprehensive Go library for file processing, database operations, and system utilities with extensive compression support for golang HomeBase framework.
 
 ## Installation
 
@@ -45,6 +45,60 @@ func main() {
 }
 ```
 
+## Structured Data Format Examples
+
+```go
+import "github.com/parf/homebase-go-lib/fileiterator"
+
+type Record struct {
+    ID    int64  `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+
+// Process different formats (all support compression auto-detection)
+func processData() {
+    // CSV with automatic decompression
+    // fileiterator.IterateCSVMap("data.csv.gz", func(row map[string]string) error {
+    //     fmt.Printf("Name: %s\n", row["name"])
+    //     return nil
+    // })
+
+    // JSON Lines with type safety
+    // fileiterator.IterateJSONLTyped("records.jsonl.gz", func(rec Record) error {
+    //     fmt.Printf("Processing: %s\n", rec.Name)
+    //     return nil
+    // })
+
+    // MessagePack (more compact than JSON)
+    fileiterator.IterateMsgPackTyped("data.msgpack.zst", func(rec Record) error {
+        fmt.Printf("Record: %d - %s\n", rec.ID, rec.Name)
+        return nil
+    })
+
+    // Apache Parquet (columnar format, best for analytics)
+    fileiterator.IterateParquet("analytics.parquet", func(record map[string]interface{}) error {
+        fmt.Printf("ID: %v, Name: %v\n", record["id"], record["name"])
+        return nil
+    })
+
+    // FlatBuffer List (fastest reads, 3x faster than JSONL)
+    fileiterator.IterateFlatBufferList("events.fb.lz4", func(data []byte) error {
+        // Deserialize FlatBuffer bytes
+        return nil
+    })
+}
+```
+
+**Format Selection Guide:**
+- **CSV**: Human-readable, Excel compatible, simple structure
+- **JSON Lines**: Widely supported, easy debugging, line-by-line processing
+- **MessagePack**: 2x smaller than JSON, faster parsing
+- **Parquet**: Best for analytics, columnar compression, SQL-like queries
+- **FlatBuffer**: Fastest reads (3x), zero-copy deserialization, binary format
+
+**Compression Support:** All formats work with `.gz`, `.zst`, `.lz4`, `.br`, `.xz` extensions automatically.
+
 ## Features
 
 ### General Utilities
@@ -87,6 +141,9 @@ func main() {
 - **IterateJSONLTyped**: Process JSON Lines with type-safety (Go generics)
 - **IterateCSV**: Process CSV files row-by-row (arrays)
 - **IterateCSVMap**: Process CSV files with headers as maps
+- **IterateMsgPackTyped**: Process MessagePack files with type-safety
+- **IterateParquet**: Process Apache Parquet columnar files
+- **IterateFlatBufferList**: Process FlatBuffer list files (fastest reads)
 
 #### Compression Support
 **7 formats with automatic detection:**

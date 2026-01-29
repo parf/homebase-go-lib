@@ -1,12 +1,20 @@
 package benchmarks
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	flatbuffers "github.com/google/flatbuffers/go"
+	"github.com/apache/arrow/go/v14/arrow"
+	"github.com/apache/arrow/go/v14/arrow/array"
+	"github.com/apache/arrow/go/v14/arrow/memory"
+	"github.com/apache/arrow/go/v14/parquet"
+	"github.com/apache/arrow/go/v14/parquet/compress"
+	"github.com/apache/arrow/go/v14/parquet/file"
+	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 	"github.com/parf/homebase-go-lib/fileiterator"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -187,6 +195,60 @@ func BenchmarkWrite_FlatBuffer_Zstd(b *testing.B) {
 
 		builder.Finish(offsets[0])
 		fileiterator.SaveFlatBufferCompressed(file, builder)
+	}
+}
+
+func BenchmarkWrite_Parquet(b *testing.B) {
+	tmpDir := b.TempDir()
+	for i := 0; i < b.N; i++ {
+		filename := filepath.Join(tmpDir, "test.parquet")
+
+		// Create Arrow schema
+		schema := arrow.NewSchema(
+			[]arrow.Field{
+				{Name: "id", Type: arrow.PrimitiveTypes.Int64},
+				{Name: "name", Type: arrow.BinaryTypes.String},
+				{Name: "email", Type: arrow.BinaryTypes.String},
+				{Name: "age", Type: arrow.PrimitiveTypes.Int64},
+				{Name: "score", Type: arrow.PrimitiveTypes.Float64},
+				{Name: "active", Type: arrow.FixedWidthTypes.Boolean},
+				{Name: "category", Type: arrow.BinaryTypes.String},
+				{Name: "timestamp", Type: arrow.PrimitiveTypes.Int64},
+			},
+			nil,
+		)
+
+		// Create output file
+		f, _ := os.Create(filename)
+		defer f.Close()
+
+		// Create Parquet writer with Snappy compression
+		writerProps := parquet.NewWriterProperties(parquet.WithCompression(compress.Codecs.Snappy))
+		arrowProps := pqarrow.DefaultWriterProps()
+		writer, _ := pqarrow.NewFileWriter(schema, f, writerProps, arrowProps)
+		defer writer.Close()
+
+		// Build Arrow record batch
+		pool := memory.NewGoAllocator()
+		builder := array.NewRecordBuilder(pool, schema)
+		defer builder.Release()
+
+		for _, record := range testDataset {
+			builder.Field(0).(*array.Int64Builder).Append(record.ID)
+			builder.Field(1).(*array.StringBuilder).Append(record.Name)
+			builder.Field(2).(*array.StringBuilder).Append(record.Email)
+			builder.Field(3).(*array.Int64Builder).Append(int64(record.Age))
+			builder.Field(4).(*array.Float64Builder).Append(record.Score)
+			builder.Field(5).(*array.BooleanBuilder).Append(record.Active)
+			builder.Field(6).(*array.StringBuilder).Append(record.Category)
+			builder.Field(7).(*array.Int64Builder).Append(record.Timestamp)
+		}
+
+		rec := builder.NewRecord()
+		defer rec.Release()
+
+		// Write record batch
+		writer.Write(rec)
 	}
 }
 
@@ -375,5 +437,61 @@ func BenchmarkRead_MsgPack_LZ4(b *testing.B) {
 			count++
 			return nil
 		})
+	}
+}
+
+func BenchmarkRead_Parquet(b *testing.B) {
+	tmpDir := b.TempDir()
+	filename := filepath.Join(tmpDir, "test.parquet")
+
+	// Setup: Write file once
+	schema := arrow.NewSchema(
+		[]arrow.Field{
+			{Name: "id", Type: arrow.PrimitiveTypes.Int64},
+			{Name: "name", Type: arrow.BinaryTypes.String},
+			{Name: "email", Type: arrow.BinaryTypes.String},
+			{Name: "age", Type: arrow.PrimitiveTypes.Int64},
+			{Name: "score", Type: arrow.PrimitiveTypes.Float64},
+			{Name: "active", Type: arrow.FixedWidthTypes.Boolean},
+			{Name: "category", Type: arrow.BinaryTypes.String},
+			{Name: "timestamp", Type: arrow.PrimitiveTypes.Int64},
+		},
+		nil,
+	)
+
+	f, _ := os.Create(filename)
+	writerProps := parquet.NewWriterProperties(parquet.WithCompression(compress.Codecs.Snappy))
+	arrowProps := pqarrow.DefaultWriterProps()
+	writer, _ := pqarrow.NewFileWriter(schema, f, writerProps, arrowProps)
+
+	pool := memory.NewGoAllocator()
+	builder := array.NewRecordBuilder(pool, schema)
+
+	for _, record := range testDataset {
+		builder.Field(0).(*array.Int64Builder).Append(record.ID)
+		builder.Field(1).(*array.StringBuilder).Append(record.Name)
+		builder.Field(2).(*array.StringBuilder).Append(record.Email)
+		builder.Field(3).(*array.Int64Builder).Append(int64(record.Age))
+		builder.Field(4).(*array.Float64Builder).Append(record.Score)
+		builder.Field(5).(*array.BooleanBuilder).Append(record.Active)
+		builder.Field(6).(*array.StringBuilder).Append(record.Category)
+		builder.Field(7).(*array.Int64Builder).Append(record.Timestamp)
+	}
+
+	rec := builder.NewRecord()
+	writer.Write(rec)
+	rec.Release()
+	builder.Release()
+	writer.Close()
+	f.Close()
+
+	// Benchmark reading
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pf, _ := file.OpenParquetFile(filename, false)
+		reader, _ := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{}, memory.NewGoAllocator())
+		tbl, _ := reader.ReadTable(context.Background())
+		tbl.Release()
+		pf.Close()
 	}
 }
