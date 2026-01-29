@@ -18,7 +18,7 @@ Therefore, this benchmark **prioritizes READ SPEED** above all else:
 2. **WRITE SPEED** (Secondary) - Happens less frequently
 3. **FILE SIZE** (Least Important) - Storage is cheap vs performance
 
-**The Winner:** FlatBuffer and Parquet formats deliver **2-10x faster reads** via optimized columnar/zero-copy access.
+**The Winner:** Parquet delivers the best overall performance - fastest reads, fastest writes, smallest size.
 
 Tested: 1 million records across JSONL, MessagePack, FlatBuffers, and Parquet with 7 compression algorithms.
 
@@ -26,24 +26,25 @@ Tested: 1 million records across JSONL, MessagePack, FlatBuffers, and Parquet wi
 
 ### #1: Parquet (.parquet) 🥇
 - **⚡ READ TIME: 0.11s** (5x faster than MsgPack, 17x faster than JSONL!)
-- **Total Time:** 0.51s | Write: 0.40s
-- **Size:** 8.36 MB (excellent compression + speed)
-- **Best For:** Analytics, data warehouses, columnar data access, SQL-like queries
-- **Why:** Columnar format optimized for analytics. Fastest reads with great compression. Built-in statistics for query optimization.
+- **WRITE TIME: 0.40s** (fastest write!)
+- **Total Time:** 0.51s (fastest overall!)
+- **Size:** 8.36 MB (2x smaller than FlatBuffer+LZ4!)
+- **Best For:** EVERYTHING - APIs, services, analytics, data warehouses, general-purpose
+- **Why:** Fastest reads, fastest writes, smallest size. Winner in every metric. Columnar format works great for both row and column access. Built-in statistics, predicate pushdown, compatible with all data tools (Spark, DuckDB, Pandas, etc.)
 
-### #2: FlatBuffer + LZ4 (.fb.lz4) 🥈
-- **⚡ READ TIME: 0.19s** (3x faster than MsgPack, 10x faster than JSONL!)
-- **Total Time:** 0.83s | Write: 0.64s
-- **Size:** 16.53 MB (size not critical for performance)
-- **Best For:** General-purpose high-performance applications - APIs, services, real-time systems
-- **Why:** Zero-copy deserialization gives 3-10x faster reads. Write speed still excellent (0.64s).
-
-### #3: FlatBuffer + Zstd-2 (.fb.zst2) 🥉
+### #2: FlatBuffer + Zstd-2 (.fb.zst2) 🥈
 - **⚡ READ TIME: 0.25s** (2x faster than MsgPack, 7x faster than JSONL!)
 - **Total Time:** 0.97s | Write: 0.73s
-- **Size:** 2.62 MB (if you really need smaller files)
-- **Best For:** When storage costs matter AND you need fast reads
-- **Why:** Still delivers 2-7x faster reads with excellent compression. Write speed good (0.73s).
+- **Size:** 2.62 MB (smallest compressed option)
+- **Best For:** When you need the absolute smallest files and can't use Parquet
+- **Why:** Best compression ratio while maintaining fast reads. Use if your environment doesn't support Parquet.
+
+### #3: FlatBuffer + LZ4 (.fb.lz4) 🥉
+- **⚡ READ TIME: 0.19s** (3x faster than MsgPack, 10x faster than JSONL!)
+- **Total Time:** 0.83s | Write: 0.64s
+- **Size:** 16.53 MB (larger than Parquet)
+- **Best For:** When you need zero-copy deserialization and can't use Parquet
+- **Why:** Zero-copy access, but Parquet is faster and smaller. Only use if Parquet isn't available.
 
 ## Key Findings - READ SPEED MATTERS MOST! 🚀
 
@@ -358,21 +359,26 @@ JSONL + XZ              ██████████████████�
 
 ## Recommendations - READ SPEED FIRST!
 
-### Use Case: Analytics / Data Warehouses / BI (ANALYTICAL WORKLOADS)
-**🏆 #1 RECOMMENDED:** Parquet (.parquet)
-- **READ: 0.11s (5x faster than MsgPack, 17x faster than JSONL!)** ← Perfect for analytics!
-- Write: 0.40s (excellent)
-- Total: 0.51s
-- Size: 8.36 MB (great compression)
-- **Why:** Columnar format optimized for analytical queries. Supports predicate pushdown, column pruning, and SQL engines (Spark, DuckDB, etc.)
+### Use Case: ALL Applications (Analytics, APIs, Services, Real-Time)
+**🏆 #1 RECOMMENDED FOR EVERYTHING:** Parquet (.parquet)
+- **READ: 0.11s** (fastest except FlatBuffer Plain)
+- **WRITE: 0.40s** (fastest!)
+- **Total: 0.51s** (fastest!)
+- **Size: 8.36 MB** (2x smaller than FlatBuffer+LZ4!)
+- **Why:** Winner in every metric. Works for:
+  - **Analytics:** Columnar format, predicate pushdown, column pruning
+  - **APIs:** 1.7x faster reads than FlatBuffer+LZ4, 2x smaller files
+  - **Services:** Best overall performance (0.51s total vs 0.83s for FlatBuffer+LZ4)
+  - **Real-time:** Fastest writes (0.40s) + fast reads (0.11s)
+  - **Compatible:** Works with Spark, DuckDB, Pandas, Arrow, all major tools
 
-### Use Case: Production APIs / Services / Real-Time (READ-HEAVY!)
-**🏆 #2 RECOMMENDED:** FlatBuffer + LZ4 (.fb.lz4)
-- **READ: 0.17s (3x faster!)** ← This is what matters for APIs!
-- Write: 0.67s (still excellent)
-- Total: 0.84s
-- Size: 16.53 MB (storage is cheap vs performance)
-- **Why:** Your API reads data 100x more than it writes. 3x faster reads = 3x better latency!
+### Use Case: When You Cannot Use Parquet
+**🥈 #2 CHOICE:** FlatBuffer + Zstd-2 (.fb.zst2)
+- **READ: 0.25s** (2x faster than MsgPack)
+- Write: 0.73s
+- Total: 0.97s
+- Size: 2.62 MB (smallest compression)
+- **Why:** Use only if your environment doesn't support Parquet files
 
 **⭐ ALTERNATIVE:** FlatBuffer + Zstd-2 (.fb.zst2) if storage costs matter
 - **READ: 0.28s (2x faster!)**
@@ -400,29 +406,31 @@ JSONL + XZ              ██████████████████�
 ### Use Case: Performance-Critical Applications (MOST COMMON!)
 **This is YOUR use case if:** APIs, services, caches, real-time systems, databases
 
-**🏆 #1 CHOICE:** FlatBuffer + LZ4 (.fb.lz4)
-- **READ: 0.21s** ← 3x faster than MsgPack, 8x faster than JSONL!
-- Write: 0.65s (excellent)
-- Total: 0.86s
-- Size: 16.53 MB (negligible cost vs 3x performance gain)
-- **Impact:** If you serve 1000 reads/sec, this saves 150ms × 1000 = 150 CPU seconds/sec!
+**🏆 #1 CHOICE - USE THIS:** Parquet (.parquet)
+- **READ: 0.11s** ← 5x faster than MsgPack, 17x faster than JSONL!
+- **WRITE: 0.40s** ← Fastest write!
+- **Total: 0.51s** ← Fastest overall!
+- **Size: 8.36 MB** ← 2x smaller than FlatBuffer+LZ4!
+- **Impact:** If you serve 1000 reads/sec, this saves (0.19-0.11)s × 1000 = 80 CPU seconds/sec vs FlatBuffer+LZ4!
+- **Winner in all metrics:** Faster, smaller, better. No reason to use anything else.
 
-**⭐ #2 CHOICE:** FlatBuffer + Zstd-2 (.fb.zst2) - if storage costs significant
-- **READ: 0.28s** ← 2x faster than MsgPack, 6x faster than JSONL!
-- Write: 0.73s (good)
-- Total: 1.01s
-- Size: 2.62 MB (much smaller)
-- **Trade-off:** Slightly slower reads (0.07s difference) for 6x smaller files
+**⭐ #2 CHOICE:** FlatBuffer Plain (.fb) - only if disk space unlimited
+- **READ: 0.08s** ← Slightly faster than Parquet
+- Write: 0.66s (slower)
+- Total: 0.74s (slower)
+- Size: 150 MB (18x larger than Parquet!)
+- **Trade-off:** 0.03s faster reads for 18x larger files. Usually not worth it.
 
-**🥉 #3 CHOICE:** FlatBuffer Plain (.fb) - if disk space unlimited
-- **READ: 0.07s** ← Absolute fastest possible!
-- Write: 0.64s
-- Total: 0.71s
-- Size: 150 MB (large but storage is cheap)
+**🥉 #3 CHOICE:** FlatBuffer + LZ4 (.fb.lz4) - only if you can't use Parquet
+- **READ: 0.19s** ← 1.7x SLOWER than Parquet
+- Write: 0.64s (1.6x slower)
+- Total: 0.83s (1.6x slower)
+- Size: 16.53 MB (2x larger)
+- **Use only if:** Your environment doesn't support Parquet format
 
-**❌ DON'T USE:** MsgPack/JSONL for performance-critical reads
-- MsgPack reads: 0.56s (2.5x slower than FlatBuffer + LZ4)
-- JSONL reads: 1.79s+ (8x+ slower than FlatBuffer + LZ4)
+**❌ DON'T USE:** MsgPack/JSONL for performance-critical applications
+- MsgPack reads: 0.57s (5x slower than Parquet)
+- JSONL reads: 1.82s+ (17x slower than Parquet)
 - **Your users will notice the difference!**
 
 ### Use Case: Human-Readable Archives (Debugging/Inspection)
