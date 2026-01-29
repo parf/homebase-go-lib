@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
+	"github.com/pierrec/lz4/v4"
 	"github.com/parf/homebase-go-lib/internal/compression"
 )
 
@@ -81,6 +82,45 @@ func TestIterateLinesZstd(t *testing.T) {
 
 	var lines []string
 	compression.IterateLinesZstd(testFile, func(line string) {
+		lines = append(lines, line)
+	})
+
+	if len(lines) != 3 {
+		t.Errorf("Expected 3 lines, got %d", len(lines))
+	}
+}
+
+func TestLoadBinLz4File(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.bin.lz4")
+	testData := []byte("Test LZ4 data")
+
+	f, _ := os.Create(testFile)
+	lzw := lz4.NewWriter(f)
+	lzw.Write(testData)
+	lzw.Close()
+	f.Close()
+
+	var result []byte
+	compression.LoadBinLz4File(testFile, &result)
+
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Expected %s, got %s", testData, result)
+	}
+}
+
+func TestIterateLinesLz4(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.lz4")
+
+	f, _ := os.Create(testFile)
+	lzw := lz4.NewWriter(f)
+	lzw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	lzw.Close()
+	f.Close()
+
+	var lines []string
+	compression.IterateLinesLz4(testFile, func(line string) {
 		lines = append(lines, line)
 	})
 

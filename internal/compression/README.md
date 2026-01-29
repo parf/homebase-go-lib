@@ -28,6 +28,15 @@ var data []byte
 compression.LoadBinZstdFile("file.bin.zst", &data)
 ```
 
+#### LoadBinLz4File(filename string, dest *[]byte)
+
+Load LZ4-compressed binary file explicitly.
+
+```go
+var data []byte
+compression.LoadBinLz4File("file.bin.lz4", &data)
+```
+
 ### Text File Loaders
 
 #### LoadLinesGzFile(filename string, processor func(string))
@@ -50,6 +59,16 @@ compression.LoadLinesZstdFile("file.txt.zst", func(line string) {
 })
 ```
 
+#### IterateLinesLz4(filename string, processor func(string))
+
+Process lines in an LZ4-compressed text file.
+
+```go
+compression.IterateLinesLz4("file.txt.lz4", func(line string) {
+    fmt.Println(line)
+})
+```
+
 ### Special Format Loaders
 
 #### LoadIDTabGzFile(filename string, processor func(int32, string))
@@ -67,9 +86,9 @@ compression.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
 **All functions from this package are now available in `fileiterator` package.**
 
 Use `github.com/parf/homebase-go-lib/fileiterator` instead:
-- LoadBinGzFile, LoadBinZstdFile
-- LoadLinesGzFile, LoadLinesZstdFile
-- LoadIDTabGzFile
+- LoadBinGzFile, LoadBinZstdFile, LoadBinLz4File
+- IterateLinesGz, IterateLinesZstd, IterateLinesLz4
+- IterateIDTabFile (auto-detects all compression formats)
 - IterateBinaryRecords and explicit format iterators
 
 This internal package is kept for backward compatibility within the module only.
@@ -142,6 +161,7 @@ compression.IterateZlibRecords("data.bin.zlib", 10, processor)
 - **Gzip** (.gz) - Standard gzip compression (RFC 1952)
 - **Zstd** (.zst) - Zstandard compression (modern, faster)
 - **Zlib** (.zlib, .zz) - Zlib compression (RFC 1950)
+- **LZ4** (.lz4) - Fast compression algorithm
 
 ## URL Support
 

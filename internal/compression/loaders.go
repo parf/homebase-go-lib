@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
+	"github.com/pierrec/lz4/v4"
 )
 
 // openFileOrURL opens a file or HTTP URL and returns an io.ReadCloser
@@ -100,6 +101,36 @@ func IterateLinesZstd(filename string, processor func(string)) {
 		panic(err)
 	}
 	defer fz.Close()
+	scanner := bufio.NewScanner(fz)
+	count := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		processor(line)
+		count++
+	}
+	fmt.Printf("File %s. Lines processed: %d\n", filename, count)
+}
+
+// LoadBinLz4File loads an LZ4-compressed file into a byte buffer
+func LoadBinLz4File(filename string, dest *[]byte) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	fz := lz4.NewReader(fi)
+	var err error
+	*dest, err = ioutil.ReadAll(fz)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("File %s loaded. %d bytes\n", filename, len(*dest))
+}
+
+// IterateLinesLz4 processes lines in an LZ4-compressed file
+func IterateLinesLz4(filename string, processor func(string)) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	fz := lz4.NewReader(fi)
 	scanner := bufio.NewScanner(fz)
 	count := 0
 	for scanner.Scan() {
