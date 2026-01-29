@@ -32,15 +32,15 @@ Tested: 1 million records across JSONL, MessagePack, FlatBuffers, and Parquet wi
 - **Why:** Columnar format optimized for analytics. Fastest reads with great compression. Built-in statistics for query optimization.
 
 ### #2: FlatBuffer + LZ4 (.fb.lz4) 🥈
-- **⚡ READ TIME: 0.17s** (3x faster than MsgPack, 11x faster than JSONL!)
-- **Total Time:** 0.84s | Write: 0.67s
+- **⚡ READ TIME: 0.19s** (3x faster than MsgPack, 10x faster than JSONL!)
+- **Total Time:** 0.83s | Write: 0.64s
 - **Size:** 16.53 MB (size not critical for performance)
 - **Best For:** General-purpose high-performance applications - APIs, services, real-time systems
-- **Why:** Zero-copy deserialization gives 3-11x faster reads. Write speed still excellent (0.67s).
+- **Why:** Zero-copy deserialization gives 3-10x faster reads. Write speed still excellent (0.64s).
 
 ### #3: FlatBuffer + Zstd-2 (.fb.zst2) 🥉
 - **⚡ READ TIME: 0.25s** (2x faster than MsgPack, 7x faster than JSONL!)
-- **Total Time:** 0.98s | Write: 0.73s
+- **Total Time:** 0.97s | Write: 0.73s
 - **Size:** 2.62 MB (if you really need smaller files)
 - **Best For:** When storage costs matter AND you need fast reads
 - **Why:** Still delivers 2-7x faster reads with excellent compression. Write speed good (0.73s).
@@ -49,14 +49,14 @@ Tested: 1 million records across JSONL, MessagePack, FlatBuffers, and Parquet wi
 
 ### 🏆 Winner by Read Performance (Most Important Metric)
 
-- **🥇 #1: FlatBuffer + LZ4** - READ: **0.21s** (3x faster!) | Total: 0.86s
-  - **Use this for production systems** - best read performance with compression
+- **🥇 #1: FlatBuffer Plain** - READ: **0.08s** (fastest!) | Total: 0.74s
+  - Absolute fastest reads if disk space unlimited (150 MB)
 
-- **🥈 #2: FlatBuffer + Zstd-2** - READ: **0.28s** (2x faster!) | Total: 1.01s
-  - Use when file size matters but reads must stay fast
+- **🥈 #2: Parquet** - READ: **0.11s** (analytics champion!) | Total: 0.51s
+  - **Use this for data warehouses, BI, SQL queries** - columnar format
 
-- **🥉 #3: FlatBuffer Plain** - READ: **0.07s** (10x faster!) | Total: 0.71s
-  - Absolute fastest reads if disk space unlimited
+- **🥉 #3: FlatBuffer + LZ4** - READ: **0.19s** (best compressed!) | Total: 0.83s
+  - **Use for production APIs/services** - best read performance with compression
 
 ### Why Read Speed is Critical
 - **Data is typically read 10-100x more often than written**
@@ -65,35 +65,41 @@ Tested: 1 million records across JSONL, MessagePack, FlatBuffers, and Parquet wi
 - Write speed matters less - happens once, reads happen constantly
 
 ### Other Metrics (Less Important)
-- ⚡ Fastest Write: JSONL + Zstd-2 (0.43s) - but read time is 1.83s (8x slower!)
-- 📦 Smallest Size: MsgPack + XZ (0.94 MB) - but read time is 1.49s (7x slower!)
-- 🎯 Best Non-FlatBuffer: MsgPack + Zstd-1 (read: 0.56s) - still 2.5x slower than FlatBuffer
+- ⚡ Fastest Write: Parquet (0.40s) - and also has fast reads (0.11s)!
+- 📦 Smallest Size: MsgPack + XZ (0.94 MB) - but read time is 1.49s (13x slower than Parquet!)
+- 🎯 Best Non-FlatBuffer/Parquet: MsgPack + Zstd (read: 0.57s) - still 5x slower than Parquet
 
 ---
 
 ## ⚡ FASTEST Formats (Performance Focus - Read Speed Priority)
 
-### 🚀 FlatBuffer Formats: Fastest Reads by Far!
-**All FlatBuffer formats have 3-10x faster reads than other formats due to zero-copy deserialization**
+### 🚀 Fastest Formats: Columnar & Zero-Copy Win!
+**FlatBuffer and Parquet formats deliver 3-10x faster reads through optimized data access**
 
-1. **FlatBuffer Plain** - **0.71s total** (Write: 0.64s, **Read: 0.07s**) - 150 MB
-   - Fastest reads possible - no decompression overhead
-   - Best for: Hot data paths, real-time systems
+1. **FlatBuffer Plain** - **0.74s total** (Write: 0.66s, **Read: 0.08s**) - 150 MB 🚀
+   - Fastest reads possible - zero-copy, no decompression overhead
+   - Best for: Hot data paths, real-time systems (if storage not a concern)
 
-2. **FlatBuffer + LZ4** - **0.86s total** (Write: 0.65s, **Read: 0.21s**) - 16.53 MB 🏆
-   - **RECOMMENDED: Best compressed performance**
+2. **Parquet (Snappy)** - **0.51s total** (Write: 0.40s, **Read: 0.11s**) - 8.36 MB 🏆
+   - **RECOMMENDED for analytics: Best overall performance**
+   - Read: 5x faster than MsgPack, 17x faster than JSONL
+   - Columnar format with excellent compression
+   - Best for: Data warehouses, BI, SQL queries, Apache Spark/DuckDB
+
+3. **FlatBuffer + LZ4** - **0.83s total** (Write: 0.64s, **Read: 0.19s**) - 16.53 MB ⭐
+   - **RECOMMENDED for APIs: Best compressed general-purpose**
    - Read: 3x faster than MsgPack/JSONL compressed
-   - Size: 89% compression (10x smaller than plain)
-   - Best for: Production use, APIs, services
+   - Zero-copy deserialization
+   - Best for: Production APIs, services, microservices
 
-3. **FlatBuffer + Zstd-2** - **1.01s total** (Write: 0.73s, **Read: 0.28s**) - 2.62 MB ⭐
-   - **2nd BEST: Excellent compression + fast reads**
-   - Read: Still 2x faster than MsgPack compressed
+4. **FlatBuffer + Zstd-2** - **0.97s total** (Write: 0.73s, **Read: 0.25s**) - 2.62 MB ⚡
+   - **Excellent compression + fast reads**
+   - Read: 2x faster than MsgPack compressed
    - Size: 98.3% compression (57x smaller than plain)
    - Best for: Storage-constrained + performance-critical
 
-4. **FlatBuffer + Zstd-1** - **0.98s total** (Write: 0.72s, **Read: 0.27s**) - 2.74 MB
-   - Slightly faster write, slightly larger than Zstd-2
+5. **FlatBuffer + Zstd-1** - **1.00s total** (Write: 0.71s, **Read: 0.28s**) - 2.74 MB
+   - Slightly larger than Zstd-2, similar performance
 
 ### Top Non-FlatBuffer Options (Slower Reads)
 - **MsgPack + Zstd-1** - **1.20s total** (Read: 0.56s) - 5.67 MB
@@ -126,12 +132,13 @@ JSONL + Zstd-1        ███████████████████�
 
 | Rank | Format | READ | Total | Write | Size | Why Choose This |
 |------|--------|------|-------|-------|------|-----------------|
-| **🥇** | **Parquet** 🏆 | **0.11s** | 0.51s | 0.40s | 8.36 MB | **BEST OVERALL - Analytics & queries** |
-| **🥈** | **FlatBuffer + LZ4** ⭐ | **0.17s** | 0.84s | 0.67s | 16.53 MB | **Best for APIs & services** |
-| **🥉** | **FlatBuffer + Zstd-2** | **0.25s** | 0.98s | 0.73s | 2.62 MB | Fast reads + small files |
-| 4 | FlatBuffer Plain | 0.07s | 0.71s | 0.64s | 150.17 MB | Fastest possible (no compression) |
-| 5 | MsgPack + Zstd-1 | 0.56s | 1.20s | 0.65s | 5.67 MB | Best if can't use above formats |
-| 6 | JSONL + Zstd-1 | 1.79s | 2.23s | 0.44s | 2.47 MB | Human-readable (slow reads) |
+| **🥇** | **FlatBuffer Plain** | **0.08s** | 0.74s | 0.66s | 150.17 MB | Fastest possible (no compression) |
+| **🥈** | **Parquet (Snappy)** 🏆 | **0.11s** | 0.51s | 0.40s | 8.36 MB | **BEST OVERALL - Analytics & queries** |
+| **🥉** | **FlatBuffer + LZ4** ⭐ | **0.19s** | 0.83s | 0.64s | 16.53 MB | **Best for APIs & services** |
+| 4 | FlatBuffer + Zstd-2 | 0.25s | 0.97s | 0.73s | 2.62 MB | Fast reads + small files |
+| 5 | FlatBuffer + Zstd-1 | 0.28s | 1.00s | 0.71s | 2.74 MB | Fast reads + good compression |
+| 6 | MsgPack + Zstd | 0.57s | 1.21s | 0.65s | 7.64 MB | Best if can't use above formats |
+| 7 | JSONL + Zstd-1 | 1.82s | 2.29s | 0.47s | 2.47 MB | Human-readable (slow reads) |
 
 **⚡ Read Speed Advantage:**
 - FlatBuffer formats are **2-10x faster for reads** than anything else
@@ -146,26 +153,26 @@ JSONL + Zstd-1        ███████████████████�
 READ Performance - 1M Records (Data read 10-100x more than written!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-FlatBuffer Plain        █ 0.07s 🚀 FASTEST (no compression, 150 MB)
+FlatBuffer Plain        █ 0.08s 🚀 FASTEST (no compression, 150 MB)
 Parquet (Snappy)        ██ 0.11s 🏆 #1 RECOMMENDED (analytics, 8.36 MB)
-FlatBuffer + LZ4        ███ 0.17s ⭐ #2 RECOMMENDED (APIs/services, 16.53 MB)
+FlatBuffer + LZ4        ███ 0.19s ⭐ #2 RECOMMENDED (APIs/services, 16.53 MB)
 FlatBuffer + Zstd-2     ████ 0.25s ⚡ FAST (small files, 2.62 MB)
-FlatBuffer + Zstd-1     ████ 0.27s ⚡ FAST (2.74 MB)
+FlatBuffer + Zstd-1     ████ 0.28s ⚡ FAST (2.74 MB)
 ─────────────────────────────────────────────────
-MsgPack + Zstd-1        ████████ 0.56s (5x slower than Parquet)
-MsgPack + Zstd-2        ████████ 0.55s
-MsgPack + LZ4           ████████ 0.57s
+MsgPack + Zstd          ████████ 0.57s (5x slower than Parquet)
+MsgPack + LZ4           ████████ 0.61s
+MsgPack + Plain         ████████ 0.57s
 ─────────────────────────────────────────────────
-JSONL + Zstd-1          █████████████████████████ 1.79s ⚠️ 16x SLOWER
-JSONL + Zstd-2          █████████████████████████ 1.83s
-JSONL + LZ4             █████████████████████████ 1.83s
-JSONL + Plain           █████████████████████████ 1.88s
-MsgPack + XZ            █████████████████████████████████ 1.49s
-JSONL + XZ              ██████████████████████████████████████████████████████████████████ 5.21s
+JSONL + Zstd-1          █████████████████████████ 1.82s ⚠️ 17x SLOWER
+JSONL + Zstd            █████████████████████████ 1.81s
+JSONL + LZ4             █████████████████████████ 1.84s
+JSONL + Plain           █████████████████████████ 1.89s
+MsgPack + XZ            █████████████████████████████████ 1.53s
+JSONL + XZ              ██████████████████████████████████████████████████████████████████ 5.20s
 
 💡 KEY INSIGHT: Reads happen 10-100x more often than writes!
    → Choose format based on READ speed, not write or size
-   → Parquet & FlatBuffer formats are 5-17x faster for reads
+   → Parquet & FlatBuffer formats are 3-17x faster for reads
    → Even 0.1s read improvement = 10-100s saved across all reads!
 ```
 
