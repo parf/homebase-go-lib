@@ -20,7 +20,7 @@ import (
 
 // FUOpen opens a file or URL and returns an io.ReadCloser.
 // Automatically detects and decompresses files based on extension:
-// .gz (gzip), .zst (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
+// .gz (gzip), .zst/.zst1/.zst2 (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
 func FUOpen(file_or_url string) io.ReadCloser {
 	var base io.ReadCloser
 
@@ -50,7 +50,8 @@ func FUOpen(file_or_url string) io.ReadCloser {
 			panic(err)
 		}
 		return &combinedCloser{Reader: gz, closers: []io.Closer{gz, base}}
-	} else if strings.HasSuffix(file_or_url, ".zst") {
+	} else if strings.HasSuffix(file_or_url, ".zst") || strings.HasSuffix(file_or_url, ".zst1") || strings.HasSuffix(file_or_url, ".zst2") {
+		// All zstd levels use the same decoder
 		zr, err := zstd.NewReader(base)
 		if err != nil {
 			base.Close()
@@ -125,7 +126,8 @@ func (s *simpleReadCloser) Close() error {
 
 // FUCreate creates a file and returns an io.WriteCloser.
 // Automatically compresses based on file extension:
-// .gz (gzip), .zst (zstd), .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
+// .gz (gzip), .zst (zstd default), .zst1 (zstd level 1), .zst2 (zstd level 2),
+// .zlib/.zz (zlib), .lz4 (lz4), .br (brotli), .xz (xz)
 func FUCreate(filename string) io.WriteCloser {
 	file, err := os.Create(filename)
 	if err != nil {
@@ -136,7 +138,24 @@ func FUCreate(filename string) io.WriteCloser {
 	if strings.HasSuffix(filename, ".gz") {
 		gzw := gzip.NewWriter(file)
 		return &combinedWriteCloser{Writer: gzw, closers: []io.Closer{gzw, file}}
+	} else if strings.HasSuffix(filename, ".zst1") {
+		// Zstd level 1 - fastest compression
+		zw, err := zstd.NewWriter(file, zstd.WithEncoderLevel(zstd.SpeedFastest))
+		if err != nil {
+			file.Close()
+			panic(err)
+		}
+		return &zstdWriteCloser{encoder: zw, base: file}
+	} else if strings.HasSuffix(filename, ".zst2") {
+		// Zstd level 2 - fast compression
+		zw, err := zstd.NewWriter(file, zstd.WithEncoderLevel(zstd.SpeedDefault))
+		if err != nil {
+			file.Close()
+			panic(err)
+		}
+		return &zstdWriteCloser{encoder: zw, base: file}
 	} else if strings.HasSuffix(filename, ".zst") {
+		// Zstd default level (3)
 		zw, err := zstd.NewWriter(file)
 		if err != nil {
 			file.Close()

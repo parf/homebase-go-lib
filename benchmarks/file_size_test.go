@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,12 +23,16 @@ func TestGenerateFileSizes(t *testing.T) {
 	}{
 		{"JSONL Plain", ".jsonl"},
 		{"JSONL Gzip", ".jsonl.gz"},
+		{"JSONL Zstd-1", ".jsonl.zst1"},
+		{"JSONL Zstd-2", ".jsonl.zst2"},
 		{"JSONL Zstd", ".jsonl.zst"},
 		{"JSONL LZ4", ".jsonl.lz4"},
 		{"JSONL Brotli", ".jsonl.br"},
 		{"JSONL XZ", ".jsonl.xz"},
 		{"MsgPack Plain", ".msgpack"},
 		{"MsgPack Gzip", ".msgpack.gz"},
+		{"MsgPack Zstd-1", ".msgpack.zst1"},
+		{"MsgPack Zstd-2", ".msgpack.zst2"},
 		{"MsgPack Zstd", ".msgpack.zst"},
 		{"MsgPack LZ4", ".msgpack.lz4"},
 		{"MsgPack Brotli", ".msgpack.br"},
@@ -40,7 +45,7 @@ func TestGenerateFileSizes(t *testing.T) {
 
 	// JSONL formats
 	for _, format := range formats {
-		if format.ext == ".jsonl" || (len(format.ext) > 6 && format.ext[0:6] == ".jsonl") {
+		if strings.HasPrefix(format.ext, ".jsonl") {
 			file := filepath.Join(tmpDir, "test"+format.ext)
 
 			// Measure write time
@@ -78,7 +83,7 @@ func TestGenerateFileSizes(t *testing.T) {
 
 	// MsgPack formats
 	for _, format := range formats {
-		if format.ext == ".msgpack" || (len(format.ext) > 8 && format.ext[0:8] == ".msgpack") {
+		if strings.HasPrefix(format.ext, ".msgpack") {
 			file := filepath.Join(tmpDir, "test"+format.ext)
 
 			// Measure write time
@@ -120,7 +125,10 @@ func TestGenerateFileSizes(t *testing.T) {
 		ext  string
 	}{
 		{"FlatBuffer Plain", ".fb"},
+		{"FlatBuffer Zstd-1", ".fb.zst1"},
+		{"FlatBuffer Zstd-2", ".fb.zst2"},
 		{"FlatBuffer Zstd", ".fb.zst"},
+		{"FlatBuffer LZ4", ".fb.lz4"},
 	}
 
 	for _, format := range fbFormats {
