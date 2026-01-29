@@ -1,0 +1,88 @@
+
+=== File Size & Performance Comparison (1M records) ===
+Format                Size (MB)  Write (s)   Read (s)  Total (s)
+-------------------------------------------------------------------------
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl. Lines processed: 1000000
+JSONL Plain              145.56       1.36       1.89       3.24
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.gz. Lines processed: 1000000
+JSONL Gzip                 8.11       1.22       1.89       3.12
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.zst1. Lines processed: 1000000
+JSONL Zstd-1               2.47       0.47       1.82       2.29
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.zst2. Lines processed: 1000000
+JSONL Zstd-2               2.59       0.46       1.81       2.27
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.zst. Lines processed: 1000000
+JSONL Zstd                 2.59       0.46       1.81       2.27
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.lz4. Lines processed: 1000000
+JSONL LZ4                 16.37       0.51       1.84       2.35
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.br. Lines processed: 1000000
+JSONL Brotli               1.95       1.97       1.85       3.82
+File /tmp/TestGenerateFileSizes3648884013/001/test.jsonl.xz. Lines processed: 1000000
+JSONL XZ                   4.09       3.28       5.20       8.48
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack. Records processed: 1000000
+MsgPack Plain            114.44      21.62       0.54      22.16
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.gz. Records processed: 1000000
+MsgPack Gzip              10.69       1.91       0.65       2.57
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.zst1. Records processed: 1000000
+MsgPack Zstd-1             5.67       0.64       0.56       1.21
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.zst2. Records processed: 1000000
+MsgPack Zstd-2             7.64       0.66       0.56       1.21
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.zst. Records processed: 1000000
+MsgPack Zstd               7.64       0.66       0.55       1.21
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.lz4. Records processed: 1000000
+MsgPack LZ4               17.67       0.67       0.57       1.24
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.br. Records processed: 1000000
+MsgPack Brotli             3.21       2.62       0.64       3.26
+File /tmp/TestGenerateFileSizes3648884013/001/test.msgpack.xz. Records processed: 1000000
+MsgPack XZ                 0.94       3.31       1.53       4.84
+FlatBuffer saved: /tmp/TestGenerateFileSizes3648884013/001/test.fb (157467520 bytes)
+FlatBuffer loaded: /tmp/TestGenerateFileSizes3648884013/001/test.fb (157467520 bytes)
+FlatBuffer Plain         150.17       0.66       0.09       0.75
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst1 (157467520 bytes)
+FlatBuffer loaded (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst1 (157467520 bytes)
+FlatBuffer Zstd-1          2.74       0.69       0.29       0.98
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst2 (157467520 bytes)
+FlatBuffer loaded (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst2 (157467520 bytes)
+FlatBuffer Zstd-2          2.62       0.73       0.25       0.98
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst (157467520 bytes)
+FlatBuffer loaded (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.zst (157467520 bytes)
+FlatBuffer Zstd            2.62       0.65       0.27       0.92
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.lz4 (157467520 bytes)
+FlatBuffer loaded (compressed): /tmp/TestGenerateFileSizes3648884013/001/test.fb.lz4 (157467520 bytes)
+FlatBuffer LZ4            16.53       0.67       0.17       0.84
+
+goos: linux
+goarch: amd64
+pkg: github.com/parf/homebase-go-lib/benchmarks
+cpu: AMD Ryzen 9 5900X 12-Core Processor            
+BenchmarkWrite_JSONL_Plain-24         	       1	1383328288 ns/op
+BenchmarkWrite_JSONL_Gzip-24          	       1	1246438877 ns/op
+BenchmarkWrite_JSONL_Zstd-24          	       1	 450915980 ns/op
+BenchmarkWrite_JSONL_LZ4-24           	       1	 507219786 ns/op
+BenchmarkWrite_MsgPack_Plain-24       	       1	21335370698 ns/op
+BenchmarkWrite_MsgPack_Gzip-24        	       1	1957978824 ns/op
+BenchmarkWrite_MsgPack_Zstd-24        	       1	 640554545 ns/op
+BenchmarkWrite_MsgPack_LZ4-24         	       1	 667749211 ns/op
+FlatBuffer saved: /tmp/BenchmarkWrite_FlatBuffer_Plain2147021662/001/test.fb (157467520 bytes)
+BenchmarkWrite_FlatBuffer_Plain-24    	       1	 675351619 ns/op
+FlatBuffer saved (compressed): /tmp/BenchmarkWrite_FlatBuffer_Zstd3175245346/001/test.fb.zst (157467520 bytes)
+BenchmarkWrite_FlatBuffer_Zstd-24     	       1	 646641764 ns/op
+BenchmarkWrite_Parquet-24             	       1	 401610759 ns/op
+File /tmp/BenchmarkRead_JSONL_Plain2475001751/001/test.jsonl. Lines processed: 1000000
+BenchmarkRead_JSONL_Plain-24          	       1	1840510716 ns/op
+File /tmp/BenchmarkRead_JSONL_Gzip2944869980/001/test.jsonl.gz. Lines processed: 1000000
+BenchmarkRead_JSONL_Gzip-24           	       1	1916933216 ns/op
+File /tmp/BenchmarkRead_JSONL_Zstd3277053882/001/test.jsonl.zst. Lines processed: 1000000
+BenchmarkRead_JSONL_Zstd-24           	       1	1843702922 ns/op
+File /tmp/BenchmarkRead_JSONL_LZ42498685896/001/test.jsonl.lz4. Lines processed: 1000000
+BenchmarkRead_JSONL_LZ4-24            	       1	1866560524 ns/op
+File /tmp/BenchmarkRead_MsgPack_Plain3536617941/001/test.msgpack. Records processed: 1000000
+BenchmarkRead_MsgPack_Plain-24        	       1	 564605041 ns/op
+File /tmp/BenchmarkRead_MsgPack_Gzip1803487115/001/test.msgpack.gz. Records processed: 1000000
+BenchmarkRead_MsgPack_Gzip-24         	       1	 647881511 ns/op
+File /tmp/BenchmarkRead_MsgPack_Zstd1954074105/001/test.msgpack.zst. Records processed: 1000000
+BenchmarkRead_MsgPack_Zstd-24         	       1	 569374024 ns/op
+File /tmp/BenchmarkRead_MsgPack_LZ42918787456/001/test.msgpack.lz4. Records processed: 1000000
+BenchmarkRead_MsgPack_LZ4-24          	       1	 578208876 ns/op
+BenchmarkRead_Parquet-24              	       1	 109935942 ns/op
+PASS
+ok  	github.com/parf/homebase-go-lib/benchmarks	139.112s

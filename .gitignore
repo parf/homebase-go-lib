@@ -36,3 +36,5 @@ build/
 tmp/
 temp/
 *.tmp
+cmd/jsonl2parquet
+cmd/csv2parquet
