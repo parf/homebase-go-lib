@@ -1,0 +1,39 @@
+=== RUN   TestGenerateFileSizes
+
+=== File Size & Performance Comparison (1M records) ===
+Format                Size (MB)  Write (s)   Read (s)  Total (s)
+-------------------------------------------------------------------------
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl. Lines processed: 1000000
+JSONL Plain              145.56       1.34       1.94       3.28
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl.gz. Lines processed: 1000000
+JSONL Gzip                 8.11       1.21       1.88       3.09
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl.zst. Lines processed: 1000000
+JSONL Zstd                 2.59       0.44       1.82       2.26
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl.lz4. Lines processed: 1000000
+JSONL LZ4                 16.37       0.48       1.83       2.31
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl.br. Lines processed: 1000000
+JSONL Brotli               1.95       1.95       1.87       3.82
+File /tmp/TestGenerateFileSizes4029741815/001/test.jsonl.xz. Lines processed: 1000000
+JSONL XZ                   4.09       3.23       5.21       8.44
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack. Records processed: 1000000
+MsgPack Plain            114.44      22.05       0.54      22.59
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack.gz. Records processed: 1000000
+MsgPack Gzip              10.69       1.94       0.64       2.58
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack.zst. Records processed: 1000000
+MsgPack Zstd               7.64       0.66       0.56       1.22
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack.lz4. Records processed: 1000000
+MsgPack LZ4               17.67       0.66       0.60       1.27
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack.br. Records processed: 1000000
+MsgPack Brotli             3.21       2.67       0.62       3.29
+File /tmp/TestGenerateFileSizes4029741815/001/test.msgpack.xz. Records processed: 1000000
+MsgPack XZ                 0.94       3.22       1.48       4.70
+FlatBuffer saved: /tmp/TestGenerateFileSizes4029741815/001/test.fb (157467520 bytes)
+FlatBuffer loaded: /tmp/TestGenerateFileSizes4029741815/001/test.fb (157467520 bytes)
+FlatBuffer Plain         150.17       0.65       0.07       0.72
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes4029741815/001/test.fb.zst (157467520 bytes)
+FlatBuffer loaded (compressed): /tmp/TestGenerateFileSizes4029741815/001/test.fb.zst (157467520 bytes)
+FlatBuffer Zstd            2.62       0.67       0.23       0.90
+
+--- PASS: TestGenerateFileSizes (60.52s)
+PASS
+ok  	github.com/parf/homebase-go-lib/benchmarks	60.717s

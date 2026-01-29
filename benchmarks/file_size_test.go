@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/parf/homebase-go-lib/fileiterator"
@@ -33,15 +34,17 @@ func TestGenerateFileSizes(t *testing.T) {
 		{"MsgPack XZ", ".msgpack.xz"},
 	}
 
-	fmt.Println("\n=== File Size Comparison (1M records) ===")
-	fmt.Printf("%-20s %15s %10s\n", "Format", "Size (bytes)", "Size (MB)")
-	fmt.Println("-----------------------------------------------------------")
+	fmt.Println("\n=== File Size & Performance Comparison (1M records) ===")
+	fmt.Printf("%-20s %10s %10s %10s %10s\n", "Format", "Size (MB)", "Write (s)", "Read (s)", "Total (s)")
+	fmt.Println("-------------------------------------------------------------------------")
 
 	// JSONL formats
 	for _, format := range formats {
 		if format.ext == ".jsonl" || (len(format.ext) > 6 && format.ext[0:6] == ".jsonl") {
 			file := filepath.Join(tmpDir, "test"+format.ext)
 
+			// Measure write time
+			writeStart := time.Now()
 			var w interface{ Write([]byte) (int, error); Close() error }
 			if format.ext == ".jsonl" {
 				f, _ := os.Create(file)
@@ -55,10 +58,21 @@ func TestGenerateFileSizes(t *testing.T) {
 				encoder.Encode(record)
 			}
 			w.Close()
+			writeTime := time.Since(writeStart).Seconds()
+
+			// Measure read time
+			readStart := time.Now()
+			count := 0
+			fileiterator.IterateJSONLTyped(file, func(record TestRecord) error {
+				count++
+				return nil
+			})
+			readTime := time.Since(readStart).Seconds()
 
 			stat, _ := os.Stat(file)
 			sizeMB := float64(stat.Size()) / 1024 / 1024
-			fmt.Printf("%-20s %15d %10.2f\n", format.name, stat.Size(), sizeMB)
+			totalTime := writeTime + readTime
+			fmt.Printf("%-20s %10.2f %10.2f %10.2f %10.2f\n", format.name, sizeMB, writeTime, readTime, totalTime)
 		}
 	}
 
@@ -67,6 +81,8 @@ func TestGenerateFileSizes(t *testing.T) {
 		if format.ext == ".msgpack" || (len(format.ext) > 8 && format.ext[0:8] == ".msgpack") {
 			file := filepath.Join(tmpDir, "test"+format.ext)
 
+			// Measure write time
+			writeStart := time.Now()
 			var w interface{ Write([]byte) (int, error); Close() error }
 			if format.ext == ".msgpack" {
 				f, _ := os.Create(file)
@@ -80,10 +96,21 @@ func TestGenerateFileSizes(t *testing.T) {
 				encoder.Encode(record)
 			}
 			w.Close()
+			writeTime := time.Since(writeStart).Seconds()
+
+			// Measure read time
+			readStart := time.Now()
+			count := 0
+			fileiterator.IterateMsgPackTyped(file, func(record TestRecord) error {
+				count++
+				return nil
+			})
+			readTime := time.Since(readStart).Seconds()
 
 			stat, _ := os.Stat(file)
 			sizeMB := float64(stat.Size()) / 1024 / 1024
-			fmt.Printf("%-20s %15d %10.2f\n", format.name, stat.Size(), sizeMB)
+			totalTime := writeTime + readTime
+			fmt.Printf("%-20s %10.2f %10.2f %10.2f %10.2f\n", format.name, sizeMB, writeTime, readTime, totalTime)
 		}
 	}
 
@@ -98,6 +125,9 @@ func TestGenerateFileSizes(t *testing.T) {
 
 	for _, format := range fbFormats {
 		file := filepath.Join(tmpDir, "test"+format.ext)
+
+		// Measure write time
+		writeStart := time.Now()
 		builder := flatbuffers.NewBuilder(1024 * 1024 * 100)
 
 		offsets := make([]flatbuffers.UOffsetT, numRecords)
@@ -113,10 +143,21 @@ func TestGenerateFileSizes(t *testing.T) {
 		} else {
 			fileiterator.SaveFlatBufferCompressed(file, builder)
 		}
+		writeTime := time.Since(writeStart).Seconds()
+
+		// Measure read time
+		readStart := time.Now()
+		if format.ext == ".fb" {
+			fileiterator.LoadFlatBuffer(file)
+		} else {
+			fileiterator.LoadFlatBufferCompressed(file)
+		}
+		readTime := time.Since(readStart).Seconds()
 
 		stat, _ := os.Stat(file)
 		sizeMB := float64(stat.Size()) / 1024 / 1024
-		fmt.Printf("%-20s %15d %10.2f\n", format.name, stat.Size(), sizeMB)
+		totalTime := writeTime + readTime
+		fmt.Printf("%-20s %10.2f %10.2f %10.2f %10.2f\n", format.name, sizeMB, writeTime, readTime, totalTime)
 	}
 
 	fmt.Println()

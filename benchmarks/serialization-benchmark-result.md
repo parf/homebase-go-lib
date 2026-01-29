@@ -13,12 +13,52 @@ This benchmark compares different serialization formats (JSONL, MessagePack, Fla
 
 ## Key Findings
 
-🏆 **Best Overall:** MessagePack + XZ (0.94 MB, 99.2% compression)
-⚡ **Fastest Write:** JSONL + Zstd (458 ms)
-⚡ **Fastest Read:** MsgPack Plain (554 ms)
-📦 **Best Compression:** MessagePack + XZ (99.2% space reduction)
+🏆 **Best Overall:** MsgPack + Zstd (1.22s total, 7.64 MB, 93.3% compression)
+⚡ **Fastest Overall:** FlatBuffer Plain (0.72s total, 150 MB)
+⚡ **Fastest Write:** JSONL + Zstd (0.44s)
+⚡ **Fastest Read:** FlatBuffer Plain (0.07s - zero-copy)
+📦 **Best Compression:** MsgPack + XZ (0.94 MB, 99.2% reduction, 4.70s total)
 
 ---
+
+## Quick Reference: Top Performers
+
+| Metric | Format | Value | Trade-off |
+|--------|--------|-------|-----------|
+| **Fastest Total Time** | FlatBuffer Plain | 0.72s | Large (150 MB) |
+| **Fastest Write** | JSONL + Zstd | 0.44s | Good size (2.59 MB) |
+| **Fastest Read** | FlatBuffer Plain | 0.07s | Large (150 MB) |
+| **Smallest File** | MsgPack + XZ | 0.94 MB | Slow (4.70s total) |
+| **Best Balance** | MsgPack + Zstd | 1.22s, 7.64 MB | Recommended ✓ |
+| **Fast + Small** | JSONL + Zstd | 2.26s, 2.59 MB | Human-readable |
+
+---
+
+## Combined Size & Performance Comparison
+
+| Format | Size (MB) | Write (s) | Read (s) | Total (s) | Compression % |
+|--------|-----------|-----------|----------|-----------|---------------|
+| **JSONL Plain** | 145.56 | 1.34 | 1.94 | 3.28 | 0% |
+| JSONL Gzip | 8.11 | 1.21 | 1.88 | 3.09 | 94.4% |
+| **JSONL Zstd** | **2.59** | **0.44** | **1.82** | **2.26** | **98.2%** |
+| JSONL LZ4 | 16.37 | 0.48 | 1.83 | 2.31 | 88.8% |
+| JSONL Brotli | 1.95 | 1.95 | 1.87 | 3.82 | 98.7% |
+| JSONL XZ | 4.09 | 3.23 | 5.21 | 8.44 | 97.2% |
+| **MsgPack Plain** | 114.44 | 22.05 | **0.54** | 22.59 | 0% |
+| MsgPack Gzip | 10.69 | 1.94 | 0.64 | 2.58 | 90.7% |
+| **MsgPack Zstd** | 7.64 | 0.66 | 0.56 | **1.22** | 93.3% |
+| MsgPack LZ4 | 17.67 | 0.66 | 0.60 | 1.27 | 84.6% |
+| MsgPack Brotli | 3.21 | 2.67 | 0.62 | 3.29 | 97.2% |
+| **MsgPack XZ** | **0.94** | 3.22 | 1.48 | 4.70 | **99.2%** |
+| **FlatBuffer Plain** | 150.17 | **0.65** | **0.07** | **0.72** | 0% |
+| FlatBuffer Zstd | 2.62 | 0.67 | 0.23 | 0.90 | 98.3% |
+
+### Analysis
+- **Fastest Overall:** FlatBuffer Plain (0.72s total, 0.07s read)
+- **Best Balanced:** MsgPack + Zstd (1.22s total, 7.64 MB, 93.3% compression)
+- **Fastest Write:** JSONL + Zstd (0.44s)
+- **Fastest Read:** FlatBuffer Plain (0.07s) - zero-copy deserialization
+- **Smallest Size:** MsgPack + XZ (0.94 MB, 99.2% compression)
 
 ## File Size Comparison
 
@@ -89,13 +129,14 @@ This benchmark compares different serialization formats (JSONL, MessagePack, Fla
 
 ### Speed vs Compression Trade-offs
 
-| Category | Format | Write (s) | Read (s) | Size (MB) | Notes |
-|----------|--------|-----------|----------|-----------|-------|
-| **Balanced** | JSONL + Zstd | 0.46 | 1.83 | 2.59 | Best all-around |
-| **Fast Write** | JSONL + Zstd | 0.46 | 1.83 | 2.59 | Fastest write |
-| **Fast Read** | MsgPack Plain | 21.87 | 0.55 | 114.44 | Fastest read |
-| **Best Compression** | MsgPack + XZ | N/A | N/A | 0.94 | 99.2% reduction |
-| **Small + Fast** | MsgPack + Zstd | 0.63 | 0.56 | 7.64 | Good balance |
+| Category | Format | Write (s) | Read (s) | Total (s) | Size (MB) | Notes |
+|----------|--------|-----------|----------|-----------|-----------|-------|
+| **Best Overall** | MsgPack + Zstd | 0.66 | 0.56 | 1.22 | 7.64 | Best balance |
+| **Fastest** | FlatBuffer Plain | 0.65 | 0.07 | 0.72 | 150.17 | Zero-copy reads |
+| **Fast Write** | JSONL + Zstd | 0.44 | 1.82 | 2.26 | 2.59 | Fastest write |
+| **Fast Read** | FlatBuffer Plain | 0.65 | 0.07 | 0.72 | 150.17 | Zero-copy |
+| **Best Compression** | MsgPack + XZ | 3.22 | 1.48 | 4.70 | 0.94 | 99.2% reduction |
+| **Small + Fast** | MsgPack + Zstd | 0.66 | 0.56 | 1.22 | 7.64 | Recommended |
 
 ---
 
@@ -103,38 +144,36 @@ This benchmark compares different serialization formats (JSONL, MessagePack, Fla
 
 ### Use Case: High-Throughput Logging
 **Recommendation:** JSONL + Zstd
-- Fast writes (458ms for 1M records)
+- Fast writes (0.44s for 1M records)
+- Total time: 2.26s (write + read)
 - Good compression (98.2%, 2.59 MB)
 - Human-readable format
-- Fast decompression
 
 ### Use Case: Data Archival
-**Recommendation:** MessagePack + XZ or Brotli
-- Maximum compression (0.94-3.21 MB)
-- 99.2% space reduction
-- Binary format (smaller than JSON)
-- Good for long-term storage
+**Recommendation:** MessagePack + XZ
+- Maximum compression (0.94 MB, 99.2% reduction)
+- Total time: 4.70s (acceptable for archival)
+- 122x smaller than plain JSONL
+- Binary format for long-term storage
 
 ### Use Case: Real-Time Processing
-**Recommendation:** MessagePack Plain or + Zstd
-- Fastest reads (554-558ms)
-- Binary format for efficiency
-- Low decompression overhead with Zstd
-- Type-safe parsing
+**Recommendation:** FlatBuffer Plain or MsgPack + Zstd
+- **FlatBuffer:** 0.72s total (0.07s read), zero-copy access
+- **MsgPack + Zstd:** 1.22s total, 93% smaller, type-safe
+- Choose FlatBuffer for speed, MsgPack + Zstd for balance
 
 ### Use Case: Human-Readable Archives
-**Recommendation:** JSONL + Brotli
-- Human-readable format
-- Excellent compression (1.95 MB, 98.7%)
-- Good for debug/inspection
-- Easy to parse with standard tools
+**Recommendation:** JSONL + Brotli or Zstd
+- **Brotli:** 1.95 MB (98.7%), 3.82s total
+- **Zstd:** 2.59 MB (98.2%), 2.26s total - **RECOMMENDED**
+- Human-readable, fast, good compression
 
 ### Use Case: Large Binary Data
-**Recommendation:** FlatBuffer + Zstd
+**Recommendation:** FlatBuffer Plain or + Zstd
+- **Plain:** 0.72s total, 150 MB - fastest
+- **Zstd:** 0.90s total, 2.62 MB - 98.3% smaller
 - Zero-copy deserialization
-- Good compression (2.62 MB, 98.3%)
-- Fast read access to specific fields
-- Ideal for network protocols
+- Random field access without full decode
 
 ---
 
