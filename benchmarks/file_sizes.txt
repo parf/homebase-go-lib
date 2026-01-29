@@ -1,0 +1,25 @@
+=== RUN   TestGenerateFileSizes
+
+=== File Size Comparison (1M records) ===
+Format                  Size (bytes)  Size (MB)
+-----------------------------------------------------------
+JSONL Plain                152628890     145.56
+JSONL Gzip                   8508708       8.11
+JSONL Zstd                   2714335       2.59
+JSONL LZ4                   17161370      16.37
+JSONL Brotli                 2046654       1.95
+JSONL XZ                     4289016       4.09
+MsgPack Plain              120000000     114.44
+MsgPack Gzip                11204078      10.69
+MsgPack Zstd                 8008844       7.64
+MsgPack LZ4                 18527538      17.67
+MsgPack Brotli               3365899       3.21
+MsgPack XZ                    983184       0.94
+FlatBuffer saved: /tmp/TestGenerateFileSizes1945598314/001/test.fb (157467520 bytes)
+FlatBuffer Plain           157467520     150.17
+FlatBuffer saved (compressed): /tmp/TestGenerateFileSizes1945598314/001/test.fb.zst (157467520 bytes)
+FlatBuffer Zstd              2752056       2.62
+
+--- PASS: TestGenerateFileSizes (41.25s)
+PASS
+ok  	github.com/parf/homebase-go-lib/benchmarks	41.459s
