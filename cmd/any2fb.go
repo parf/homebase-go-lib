@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/csv"
 	"flag"
 	"fmt"
@@ -10,10 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/apache/arrow/go/v14/arrow/array"
-	"github.com/apache/arrow/go/v14/arrow/memory"
-	"github.com/apache/arrow/go/v14/parquet/file"
-	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/parf/homebase-go-lib/fileiterator"
 )
@@ -22,46 +17,52 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		fmt.Fprintf(os.Stderr, "any2fb - Convert any format to FlatBuffer\n")
-		fmt.Fprintf(os.Stderr, "=========================================\n\n")
-		fmt.Fprintf(os.Stderr, "Usage: %s <input-file> [output-file]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "any2fb - Convert to FlatBuffer (FIXED SCHEMA ONLY)\n")
+		fmt.Fprintf(os.Stderr, "====================================================\n\n")
+		fmt.Fprintf(os.Stderr, "⚠️  LIMITATION: FlatBuffer requires generated code for each schema.\n")
+		fmt.Fprintf(os.Stderr, "   This tool only supports a FIXED schema (id, name, email, age, score, active, category, timestamp).\n")
+		fmt.Fprintf(os.Stderr, "   For ANY schema support, use ./any2parquet instead!\n\n")
 
-		fmt.Fprintf(os.Stderr, "Full Benchmark Results:\n")
-		fmt.Fprintf(os.Stderr, "  https://github.com/parf/homebase-go-lib/blob/main/benchmarks/serialization-benchmark-result.md\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <input-file> [output-file]\n\n", os.Args[0])
 
 		fmt.Fprintf(os.Stderr, "What is FlatBuffer (.fb)?\n")
 		fmt.Fprintf(os.Stderr, "  FlatBuffer is a binary format with zero-copy deserialization.\n")
 		fmt.Fprintf(os.Stderr, "  Fast reads (0.06s for 1M records), but large files (160MB uncompressed).\n")
 		fmt.Fprintf(os.Stderr, "  Best for: Hot data paths where read speed is critical.\n\n")
 
-		fmt.Fprintf(os.Stderr, "Supported input formats:\n")
-		fmt.Fprintf(os.Stderr, "  - JSONL: JSON Lines, one JSON object per line\n")
-		fmt.Fprintf(os.Stderr, "  - CSV: Comma-separated values with header row\n")
-		fmt.Fprintf(os.Stderr, "  - MsgPack: Binary serialization format (compact)\n")
-		fmt.Fprintf(os.Stderr, "  - Parquet: Columnar storage format (recommended)\n\n")
+		fmt.Fprintf(os.Stderr, "Full Benchmark Results:\n")
+		fmt.Fprintf(os.Stderr, "  https://github.com/parf/homebase-go-lib/blob/main/benchmarks/serialization-benchmark-result.md\n\n")
 
-		fmt.Fprintf(os.Stderr, "Compression formats (auto-detected by extension):\n")
-		fmt.Fprintf(os.Stderr, "  .gz   - Gzip (standard compression, slow)\n")
-		fmt.Fprintf(os.Stderr, "  .zst  - Zstandard (best balance of speed and compression)\n")
-		fmt.Fprintf(os.Stderr, "  .lz4  - LZ4 (fastest compression, larger files)\n")
-		fmt.Fprintf(os.Stderr, "  .br   - Brotli (best compression, very slow)\n")
-		fmt.Fprintf(os.Stderr, "  .xz   - XZ/LZMA (excellent compression, extremely slow)\n\n")
+		fmt.Fprintf(os.Stderr, "Supported input formats (recognized extension → format):\n")
+		fmt.Fprintf(os.Stderr, "  - JSONL: JSON Lines, one JSON object per line → .jsonl\n")
+		fmt.Fprintf(os.Stderr, "  - CSV: Comma-separated values with header row → .csv, .tsv, .psv\n")
+		fmt.Fprintf(os.Stderr, "  - MsgPack: Binary serialization format → .msgpack\n")
+		fmt.Fprintf(os.Stderr, "  - Parquet: Columnar storage format (RECOMMENDED) → .parquet\n\n")
+
+		fmt.Fprintf(os.Stderr, "Input compression formats (recognized extension → format):\n")
+		fmt.Fprintf(os.Stderr, "  .gz  → Gzip (standard compression, slow)\n")
+		fmt.Fprintf(os.Stderr, "  .zst → Zstandard (best balance of speed and compression)\n")
+		fmt.Fprintf(os.Stderr, "  .lz4 → LZ4 (fastest compression, larger files)\n")
+		fmt.Fprintf(os.Stderr, "  .br  → Brotli (best compression, very slow)\n")
+		fmt.Fprintf(os.Stderr, "  .xz  → XZ/LZMA (excellent compression, extremely slow - avoid)\n\n")
+
+		fmt.Fprintf(os.Stderr, "Output compression (recognized extension → format):\n")
+		fmt.Fprintf(os.Stderr, "  .fb     → FlatBuffer (uncompressed, 160MB for 1M records)\n")
+		fmt.Fprintf(os.Stderr, "  .fb.lz4 → FlatBuffer + LZ4 (RECOMMENDED: 66MB, fastest)\n")
+		fmt.Fprintf(os.Stderr, "  .fb.zst → FlatBuffer + Zstandard (better compression)\n")
+		fmt.Fprintf(os.Stderr, "  .fb.gz  → FlatBuffer + Gzip\n\n")
 
 		fmt.Fprintf(os.Stderr, "Examples:\n")
 		fmt.Fprintf(os.Stderr, "  %s data.jsonl.gz                  → data.fb\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s data.csv.zst output.fb         → output.fb\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s data.parquet data.fb.lz4       → data.fb.lz4 (with LZ4)\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s data.jsonl data.fb.zst         → data.fb.zst (with Zstd)\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s data.parquet data.fb.lz4       → data.fb.lz4 (with LZ4 - RECOMMENDED)\n\n", os.Args[0])
 
-		fmt.Fprintf(os.Stderr, "Output: FlatBuffer List (.fb)\n")
-		fmt.Fprintf(os.Stderr, "  Zero-copy binary format, fastest reads.\n")
-		fmt.Fprintf(os.Stderr, "  Add compression extension to reduce size (160MB → 66MB):\n")
-		fmt.Fprintf(os.Stderr, "    .fb.lz4  - LZ4 (RECOMMENDED: fastest)\n")
-		fmt.Fprintf(os.Stderr, "    .fb.zst  - Zstandard (better compression)\n")
-		fmt.Fprintf(os.Stderr, "    .fb.gz   - Gzip\n\n")
+		fmt.Fprintf(os.Stderr, "Fixed Schema (required fields):\n")
+		fmt.Fprintf(os.Stderr, "  id (int64), name (string), email (string), age (int64)\n")
+		fmt.Fprintf(os.Stderr, "  score (float64), active (bool), category (string), timestamp (int64)\n\n")
 
-		fmt.Fprintf(os.Stderr, "Note: Assumes record structure with fields:\n")
-		fmt.Fprintf(os.Stderr, "  id, name, email, age, score, active, category, timestamp\n")
+		fmt.Fprintf(os.Stderr, "⚠️  For generic schema support, use ./any2parquet instead!\n")
+		fmt.Fprintf(os.Stderr, "See also: ./any2parquet (supports ANY schema with auto-inference)\n")
 		os.Exit(1)
 	}
 
@@ -82,7 +83,7 @@ func main() {
 
 	fmt.Printf("Converting %s -> %s\n", inputFile, outputFile)
 
-	// Read all records from input
+	// Read all records from input (using fixed schema)
 	records, err := readInput(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
@@ -101,6 +102,7 @@ func main() {
 	fmt.Printf("Written %s (%d bytes, %.2f MB)\n", outputFile, stat.Size(), float64(stat.Size())/1024/1024)
 }
 
+// Record with FIXED schema for FlatBuffer
 type Record struct {
 	ID        int64
 	Name      string
@@ -215,52 +217,21 @@ func readMsgPack(filename string) ([]Record, error) {
 
 func readParquet(filename string) ([]Record, error) {
 	var records []Record
-
-	pf, err := file.OpenParquetFile(filename, false)
-	if err != nil {
-		return nil, err
-	}
-	defer pf.Close()
-
-	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{}, memory.NewGoAllocator())
-	if err != nil {
-		return nil, err
-	}
-
-	tbl, err := reader.ReadTable(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	defer tbl.Release()
-
-	// Extract records from Arrow table
-	numRows := int(tbl.NumRows())
-
-	// Get columns
-	idCol := tbl.Column(0).Data().Chunk(0).(*array.Int64)
-	nameCol := tbl.Column(1).Data().Chunk(0).(*array.String)
-	emailCol := tbl.Column(2).Data().Chunk(0).(*array.String)
-	ageCol := tbl.Column(3).Data().Chunk(0).(*array.Int64)
-	scoreCol := tbl.Column(4).Data().Chunk(0).(*array.Float64)
-	activeCol := tbl.Column(5).Data().Chunk(0).(*array.Boolean)
-	categoryCol := tbl.Column(6).Data().Chunk(0).(*array.String)
-	timestampCol := tbl.Column(7).Data().Chunk(0).(*array.Int64)
-
-	for i := 0; i < numRows; i++ {
+	err := fileiterator.IterateParquetAny(filename, func(data map[string]any) error {
 		rec := Record{
-			ID:        idCol.Value(i),
-			Name:      nameCol.Value(i),
-			Email:     emailCol.Value(i),
-			Age:       ageCol.Value(i),
-			Score:     scoreCol.Value(i),
-			Active:    activeCol.Value(i),
-			Category:  categoryCol.Value(i),
-			Timestamp: timestampCol.Value(i),
+			ID:        data["id"].(int64),
+			Name:      data["name"].(string),
+			Email:     data["email"].(string),
+			Age:       data["age"].(int64),
+			Score:     data["score"].(float64),
+			Active:    data["active"].(bool),
+			Category:  data["category"].(string),
+			Timestamp: data["timestamp"].(int64),
 		}
 		records = append(records, rec)
-	}
-
-	return records, nil
+		return nil
+	})
+	return records, err
 }
 
 func writeFlatBufferList(filename string, records []Record) error {
@@ -275,7 +246,7 @@ func writeFlatBufferList(filename string, records []Record) error {
 		emailOffset := builder.CreateString(rec.Email)
 		categoryOffset := builder.CreateString(rec.Category)
 
-		// Build TestRecord
+		// Build TestRecord (fixed schema)
 		builder.StartObject(8)
 		builder.PrependInt64Slot(0, rec.ID, 0)
 		builder.PrependUOffsetTSlot(1, nameOffset, 0)

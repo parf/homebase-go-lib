@@ -1,6 +1,7 @@
 package fileiterator
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -41,7 +42,7 @@ func IterateParquet(filename string, processor func(ParquetRecord) error) error 
 		return err
 	}
 
-	tbl, err := reader.ReadTable(nil)
+	tbl, err := reader.ReadTable(context.Background())
 	if err != nil {
 		return err
 	}
@@ -350,7 +351,7 @@ func IterateParquetAny(filename string, processor func(map[string]any) error) er
 		return err
 	}
 
-	tbl, err := reader.ReadTable(nil)
+	tbl, err := reader.ReadTable(context.Background())
 	if err != nil {
 		return err
 	}

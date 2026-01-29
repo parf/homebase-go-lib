@@ -9,12 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/apache/arrow/go/v14/arrow"
-	"github.com/apache/arrow/go/v14/arrow/array"
-	"github.com/apache/arrow/go/v14/arrow/memory"
-	"github.com/apache/arrow/go/v14/parquet"
-	"github.com/apache/arrow/go/v14/parquet/compress"
-	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 	"github.com/parf/homebase-go-lib/fileiterator"
 )
 
@@ -69,8 +63,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  Write: 0.46s (fastest binary format)\n")
 		fmt.Fprintf(os.Stderr, "  Size:  44MB (72%% smaller than plain text)\n\n")
 
-		fmt.Fprintf(os.Stderr, "Note: Assumes record structure with fields:\n")
-		fmt.Fprintf(os.Stderr, "  id, name, email, age, score, active, category, timestamp\n\n")
+		fmt.Fprintf(os.Stderr, "Schema Support:\n")
+		fmt.Fprintf(os.Stderr, "  Automatically infers schema from your data - supports ANY structure!\n")
+		fmt.Fprintf(os.Stderr, "  Supported types: int64, float64, string, bool\n\n")
 
 		fmt.Fprintf(os.Stderr, "Full Benchmark Results:\n")
 		fmt.Fprintf(os.Stderr, "  https://github.com/parf/homebase-go-lib/blob/main/benchmarks/serialization-benchmark-result.md\n\n")
@@ -99,7 +94,7 @@ func main() {
 
 	fmt.Printf("Converting %s -> %s\n", inputFile, outputFile)
 
-	// Read all records from input
+	// Read all records from input (as generic map[string]any)
 	records, err := readInput(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
@@ -109,7 +104,8 @@ func main() {
 	fmt.Printf("Read %d records\n", len(records))
 
 	// Write to Parquet (compression auto-detected from filename)
-	if err := writeParquet(outputFile, records); err != nil {
+	// Uses WriteParquetAny to support ANY schema
+	if err := fileiterator.WriteParquetAny(outputFile, records); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing Parquet: %v\n", err)
 		os.Exit(1)
 	}
@@ -118,18 +114,7 @@ func main() {
 	fmt.Printf("Written %s (%d bytes, %.2f MB)\n", outputFile, stat.Size(), float64(stat.Size())/1024/1024)
 }
 
-type Record struct {
-	ID        int64
-	Name      string
-	Email     string
-	Age       int64
-	Score     float64
-	Active    bool
-	Category  string
-	Timestamp int64
-}
-
-func readInput(filename string) ([]Record, error) {
+func readInput(filename string) ([]map[string]any, error) {
 	lower := strings.ToLower(filename)
 
 	if strings.Contains(lower, ".fb") {
@@ -145,27 +130,17 @@ func readInput(filename string) ([]Record, error) {
 	return nil, fmt.Errorf("unsupported input format: %s", filename)
 }
 
-func readJSONL(filename string) ([]Record, error) {
-	var records []Record
+func readJSONL(filename string) ([]map[string]any, error) {
+	var records []map[string]any
 	err := fileiterator.IterateJSONL(filename, func(line map[string]any) error {
-		rec := Record{
-			ID:        int64(line["id"].(float64)),
-			Name:      line["name"].(string),
-			Email:     line["email"].(string),
-			Age:       int64(line["age"].(float64)),
-			Score:     line["score"].(float64),
-			Active:    line["active"].(bool),
-			Category:  line["category"].(string),
-			Timestamp: int64(line["timestamp"].(float64)),
-		}
-		records = append(records, rec)
+		records = append(records, line)
 		return nil
 	})
 	return records, err
 }
 
-func readCSV(filename string) ([]Record, error) {
-	var records []Record
+func readCSV(filename string) ([]map[string]any, error) {
+	var records []map[string]any
 
 	reader := fileiterator.FUOpen(filename)
 	defer reader.Close()
@@ -179,8 +154,8 @@ func readCSV(filename string) ([]Record, error) {
 		csvReader.Comma = '|'
 	}
 
-	// Skip header
-	_, err := csvReader.Read()
+	// Read header to get field names
+	header, err := csvReader.Read()
 	if err != nil {
 		return nil, err
 	}
@@ -194,112 +169,64 @@ func readCSV(filename string) ([]Record, error) {
 			return nil, err
 		}
 
-		var rec Record
-		fmt.Sscanf(row[0], "%d", &rec.ID)
-		rec.Name = row[1]
-		rec.Email = row[2]
-		fmt.Sscanf(row[3], "%d", &rec.Age)
-		fmt.Sscanf(row[4], "%f", &rec.Score)
-		rec.Active = row[5] == "true"
-		rec.Category = row[6]
-		fmt.Sscanf(row[7], "%d", &rec.Timestamp)
+		// Create map from header and row
+		record := make(map[string]any)
+		for i, fieldName := range header {
+			if i < len(row) {
+				// Try to infer type from value
+				value := row[i]
+				record[fieldName] = inferCSVType(value)
+			}
+		}
 
-		records = append(records, rec)
+		records = append(records, record)
 	}
 
 	return records, nil
 }
 
-func readMsgPack(filename string) ([]Record, error) {
-	var records []Record
+// inferCSVType tries to infer the type of a CSV value
+func inferCSVType(value string) any {
+	// Try bool
+	if value == "true" {
+		return true
+	}
+	if value == "false" {
+		return false
+	}
+
+	// Try int64
+	var i int64
+	if _, err := fmt.Sscanf(value, "%d", &i); err == nil && !strings.Contains(value, ".") {
+		return i
+	}
+
+	// Try float64
+	var f float64
+	if _, err := fmt.Sscanf(value, "%f", &f); err == nil {
+		return f
+	}
+
+	// Default to string
+	return value
+}
+
+func readMsgPack(filename string) ([]map[string]any, error) {
+	var records []map[string]any
 	err := fileiterator.IterateMsgPack(filename, func(data any) error {
-		m := data.(map[string]any)
-		rec := Record{
-			ID:        m["id"].(int64),
-			Name:      m["name"].(string),
-			Email:     m["email"].(string),
-			Age:       m["age"].(int64),
-			Score:     m["score"].(float64),
-			Active:    m["active"].(bool),
-			Category:  m["category"].(string),
-			Timestamp: m["timestamp"].(int64),
+		if m, ok := data.(map[string]any); ok {
+			records = append(records, m)
 		}
-		records = append(records, rec)
 		return nil
 	})
 	return records, err
 }
 
-func readFlatBuffer(filename string) ([]Record, error) {
-	var records []Record
+func readFlatBuffer(filename string) ([]map[string]any, error) {
+	var records []map[string]any
 	err := fileiterator.IterateFlatBufferList(filename, func(data []byte) error {
-		// Parse FlatBuffer record (assuming TestRecord schema)
-		// This is simplified - in production you'd use generated FlatBuffer accessors
-		rec := Record{
-			ID: int64(data[0]) | int64(data[1])<<8 | int64(data[2])<<16 | int64(data[3])<<24 |
-				int64(data[4])<<32 | int64(data[5])<<40 | int64(data[6])<<48 | int64(data[7])<<56,
-			// Note: Skipping full FlatBuffer parsing for simplicity
-			// In production, use proper FlatBuffer generated code
-		}
-		// For now, skip FlatBuffer reading (would need generated code)
-		_ = rec
-		return fmt.Errorf("FlatBuffer reading not yet fully implemented - use jsonl2parquet or csv2parquet instead")
+		// Note: Simplified - would need full FlatBuffer parsing with generated code
+		return fmt.Errorf("FlatBuffer reading not yet fully implemented - use JSONL, CSV, or MsgPack instead")
 	})
 	return records, err
-}
-
-func writeParquet(filename string, records []Record) error {
-	// Create Arrow schema
-	schema := arrow.NewSchema(
-		[]arrow.Field{
-			{Name: "id", Type: arrow.PrimitiveTypes.Int64},
-			{Name: "name", Type: arrow.BinaryTypes.String},
-			{Name: "email", Type: arrow.BinaryTypes.String},
-			{Name: "age", Type: arrow.PrimitiveTypes.Int64},
-			{Name: "score", Type: arrow.PrimitiveTypes.Float64},
-			{Name: "active", Type: arrow.FixedWidthTypes.Boolean},
-			{Name: "category", Type: arrow.BinaryTypes.String},
-			{Name: "timestamp", Type: arrow.PrimitiveTypes.Int64},
-		},
-		nil,
-	)
-
-	// Create output file (FUCreate auto-detects compression from extension)
-	f := fileiterator.FUCreate(filename)
-	defer f.Close()
-
-	// Create Parquet writer with Snappy compression
-	writerProps := parquet.NewWriterProperties(parquet.WithCompression(compress.Codecs.Snappy))
-	arrowProps := pqarrow.DefaultWriterProps()
-	writer, err := pqarrow.NewFileWriter(schema, f, writerProps, arrowProps)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-
-	// Build Arrow record batch
-	pool := memory.NewGoAllocator()
-	builder := array.NewRecordBuilder(pool, schema)
-	defer builder.Release()
-
-	for _, record := range records {
-		builder.Field(0).(*array.Int64Builder).Append(record.ID)
-		builder.Field(1).(*array.StringBuilder).Append(record.Name)
-		builder.Field(2).(*array.StringBuilder).Append(record.Email)
-		builder.Field(3).(*array.Int64Builder).Append(record.Age)
-		builder.Field(4).(*array.Float64Builder).Append(record.Score)
-		builder.Field(5).(*array.BooleanBuilder).Append(record.Active)
-		builder.Field(6).(*array.StringBuilder).Append(record.Category)
-		builder.Field(7).(*array.Int64Builder).Append(record.Timestamp)
-	}
-
-	rec := builder.NewRecord()
-	defer rec.Release()
-
-	// Write record batch
-	if err := writer.Write(rec); err != nil {
-		return err
-	}
-
-	return nil
 }
