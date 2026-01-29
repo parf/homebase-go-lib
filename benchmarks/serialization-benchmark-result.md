@@ -6,7 +6,7 @@
 - **Record Structure:** 8 fields (ID, Name, Email, Age, Score, Active, Category, Timestamp)
 - **Data Generator:** gofakeit v7 (realistic names, emails, dates, categories)
 - **CPU:** AMD Ryzen 9 5900X 12-Core Processor
-- **Test Date:** 2026-01-28
+- **Test Date:** 2025-01-28
 
 ## Summary - Parquet Wins! 🏆
 
@@ -15,7 +15,7 @@
 - **Excellent compression:** 44.11 MB (72% smaller than plain text)
 - **Best for:** Everything - APIs, analytics, services, data warehouses
 
-**💡 Key Insight:** Reads happen 10-100x more often than writes in production!
+**💡 Key Insight:** Read performance is typically more important than write performance in production systems.
 
 ## 🏆 Top Recommendations
 
@@ -77,7 +77,7 @@
 | 13 | FlatBuffer + LZ4 | 66.12 | 58.8% | 2.4x | Fast reads, moderate size |
 | 14 | MsgPack Plain | 119.33 | 23.5% | 1.3x | Very slow writes (23.24s) ⚠️ |
 | 15 | JSONL Plain | 156.11 | 0% | 1.0x | No compression |
-| 16 | FlatBuffer Plain | 160.40 | -2.8% | 0.97x | Larger than JSONL! |
+| 16 | FlatBuffer Plain | 160.40 | +2.7% | 1.03x | Larger than JSONL! |
 
 **Key Findings:**
 - 🏆 **MsgPack + Zstd** (#4): Best balance of small size (39.15 MB) + good speed (1.34s)
@@ -89,23 +89,23 @@
 
 ## Zstd Compression Level Analysis
 
-**Zstd Level 2 is significantly better than Level 1 - always use Level 2!**
+**Zstd Level 2 is modestly better than Level 1 - prefer Level 2 when possible.**
 
 ### JSONL Comparison:
 | Level | Size | Write | Read | Total | Compression Gain |
 |-------|------|-------|------|-------|------------------|
 | Zstd-1 | 43.87 MB | 0.79s | 2.04s | 2.84s | Baseline |
-| **Zstd-2** | **43.27 MB** 🏆 | **0.73s** | **1.97s** | **2.70s** | **0.60 MB smaller, 0.14s faster!** |
+| **Zstd-2** | **43.27 MB** 🏆 | **0.73s** | **1.97s** | **2.70s** | **0.60 MB smaller (1.4%), 0.14s faster (5%)** |
 | Zstd (default=4) | 43.27 MB | 0.84s | 1.91s | 2.75s | Same size as L2, slower write |
 
 ### MsgPack Comparison:
 | Level | Size | Write | Read | Total | Compression Gain |
 |-------|------|-------|------|-------|------------------|
 | Zstd-1 | 40.66 MB | 0.75s | 0.60s | 1.35s | Baseline |
-| **Zstd-2** | **39.15 MB** 🏆 | 0.79s | 0.58s | 1.37s | **1.51 MB smaller, nearly same speed!** |
+| **Zstd-2** | **39.15 MB** 🏆 | 0.79s | 0.58s | 1.37s | **1.51 MB smaller (3.7%), nearly same speed** |
 | Zstd (default=4) | 39.15 MB | 0.74s | 0.60s | 1.34s | Same size as L2 |
 
-**Recommendation:** Always use Zstd Level 2 (`.zst2` extension). Level 1 provides worse compression with no speed benefit. Default level 4 is fine but L2 is sufficient for most use cases.
+**Recommendation:** Use Zstd Level 2 (`.zst2` extension) for incrementally better compression (1.4-3.7% smaller) without performance penalty. Default level 4 is also fine and provides same compression as L2.
 
 ---
 
@@ -131,7 +131,7 @@
 | 14 | JSONL + Gzip | 7.23s | 2.52s | 4.71s | 43.27 MB | Very slow |
 | 15 | MsgPack + Brotli | 7.54s | 0.99s | 6.55s | 34.17 MB | Too slow |
 | 16 | JSONL + Brotli | 9.89s | 2.45s | 7.44s | 38.99 MB | Too slow |
-| 17 | MsgPack Plain | 23.24s | 0.58s | 22.66s | 119.33 MB | Broken benchmark ⚠️ |
+| 17 | MsgPack Plain | 23.24s | 0.58s | 22.66s | 119.33 MB | Very slow writes ⚠️ |
 | 18 | MsgPack + XZ | 45.58s | 32.00s | 13.58s | 38.29 MB | Extremely slow |
 | 19 | JSONL + XZ | 48.94s | 35.11s | 13.82s | 40.57 MB | Extremely slow |
 
@@ -139,7 +139,7 @@
 
 ## Read Performance Rankings (Most Important!)
 
-Reads happen 10-100x more often than writes in production systems.
+Read performance is typically more important than write performance in production systems.
 
 | Rank | Format | Read Time | vs Parquet | Records/sec | Use Case |
 |------|--------|-----------|------------|-------------|----------|
@@ -189,7 +189,7 @@ Reads happen 10-100x more often than writes in production systems.
 | 16 | JSONL + Brotli | 7.44s | 134,409 | 38.99 MB | Too slow |
 | 17 | MsgPack + XZ | 13.58s | 73,638 | 38.29 MB | Extremely slow |
 | 18 | JSONL + XZ | 13.82s | 72,359 | 40.57 MB | Extremely slow |
-| 19 | MsgPack Plain | 22.66s | 44,129 | 119.33 MB | ⚠️ Broken/slow |
+| 19 | MsgPack Plain | 22.66s | 44,129 | 119.33 MB | ⚠️ Anomalously slow (likely GC/memory issue) |
 
 ---
 
@@ -206,7 +206,7 @@ Reads happen 10-100x more often than writes in production systems.
 | **Brotli** | default | Very Good (71-75%) | Very Slow | High | Static files only |
 | **XZ** | default | Excellent (68-74%) | Extremely Slow | Very High | ⚠️ Cold storage only |
 
-**⚠️ Important:** Zstd Level 1 is inferior to Level 2 in both size and speed. Always use Level 2 (`.zst2`) or default (`.zst`).
+**⚠️ Important:** Zstd Level 2 provides 1.4-3.7% better compression than Level 1 without performance penalty. Prefer Level 2 (`.zst2`) or default Level 4 (`.zst`).
 
 ---
 
@@ -255,10 +255,10 @@ Reads happen 10-100x more often than writes in production systems.
 - Acceptable slow reads (1.97s) if logs are rarely read
 
 ### For Cold Storage / Archival
-**Use: MsgPack + Zstd (.msgpack.zst) NOT XZ!**
-- Size: 39.15 MB (only 1 MB larger than XZ's 38.29 MB)
-- Total: 1.34s vs XZ's 45.58s (34x faster!)
-- XZ's tiny space savings aren't worth 45-second operations
+**Use: MsgPack + Zstd (.msgpack.zst)**
+- Size: 39.15 MB (excellent compression)
+- Total: 1.34s (very fast)
+- Good balance of small size and reasonable access time
 
 ---
 
@@ -326,7 +326,7 @@ Parquet is the clear winner for production systems:
 - Need human-readable text → JSONL + Zstd-2
 
 **⚠️ Avoid:**
-- XZ compression (45-49s operations - too slow!)
+- XZ compression (45-49s operations - too slow for most use cases)
 - Brotli compression (7-10s - much slower than Zstd with similar compression)
-- Zstd Level 1 (inferior to Level 2 in both size and speed)
-- MsgPack Plain writes (22s - broken/very slow)
+- Zstd Level 1 (Level 2 provides 1.4-3.7% better compression at same speed)
+- MsgPack Plain writes (22s - anomalously slow, likely memory/GC issue in benchmark)

@@ -1,103 +1,153 @@
-# Conversion Tools
+# Universal Format Converters
 
-High-performance data format conversion utilities for optimal read performance.
+High-performance data format conversion utilities with comprehensive compression support.
 
-## Parquet Conversion Tools (Analytics Format)
+## Tools
 
-### jsonl2parquet ⭐
-Convert JSONL to Parquet format (best for analytics, 17x faster reads than JSONL!)
-
-```bash
-go run jsonl2parquet.go -input data.jsonl.gz -output data.parquet
-
-# Or use the bash wrapper:
-./jsonl2parquet.sh -input data.jsonl.gz -output data.parquet
-```
-
-**Performance:** 17x faster reads than JSONL, excellent for analytics
-**Best for:** Data warehouses, BI tools, SQL queries, Apache Spark, DuckDB
-
-### csv2parquet
-Convert CSV to Parquet format
+### any2parquet 🏆 (RECOMMENDED)
+Convert any format to Parquet - the best overall format for everything.
 
 ```bash
-go run csv2parquet.go -input data.csv.gz -output data.parquet
+# Build once
+go build any2parquet.go
 
-# Or use the bash wrapper:
-./csv2parquet.sh -input data.csv.gz -output data.parquet
+# Convert any format to Parquet
+./any2parquet data.jsonl              # → data.parquet
+./any2parquet data.csv.gz             # → data.parquet
+./any2parquet data.msgpack.zst        # → data.parquet
 
-# With options:
-./csv2parquet.sh -input data.tsv -output data.parquet -delimiter=tab -header=true
+# With LZ4 compression (optional, even smaller)
+./any2parquet --lz4 data.jsonl        # → data.parquet.lz4
 ```
 
-**Supports:**
-- Automatic compression detection (.gz, .zst, .lz4, .br, .xz)
-- Custom delimiters (comma, tab, pipe, semicolon)
-- Header detection
-- Automatic type inference (int64, float64, bool, string)
+**Supported inputs:** JSONL, CSV, MsgPack, FlatBuffer (all with compression)
+**Performance:** 0.15s read, 0.46s write, 44MB for 1M records
+**Best for:** Everything - APIs, analytics, data warehouses, ML pipelines
 
-## FlatBuffer Conversion Tools (High-Performance APIs)
-
-### jsonl2fb-lz4
-Convert JSONL to FlatBuffer LZ4 format (10x faster reads than JSONL!)
+### any2fb
+Convert any format to FlatBuffer (fastest reads, but larger files).
 
 ```bash
-go run jsonl2fb-lz4.go -input data.jsonl -output data.fb.lz4
+# Build once
+go build any2fb.go
 
-# Or use the bash wrapper:
-./jsonl2fb-lz4.sh data.jsonl data.fb.lz4
+# Convert any format to FlatBuffer
+./any2fb data.jsonl                   # → data.fb
+./any2fb data.parquet                 # → data.fb
+./any2fb data.csv.gz                  # → data.fb
+
+# With LZ4 compression (recommended)
+./any2fb --lz4 data.jsonl             # → data.fb.lz4
 ```
 
-**Performance:** 3x faster reads than JSONL, good compression
+**Supported inputs:** JSONL, CSV, MsgPack, Parquet (all with compression)
+**Performance:** 0.06s read, 0.78s write, 160MB plain / 66MB with LZ4
+**Best for:** Hot data paths where read speed is absolutely critical
 
-### fb-lz42jsonl
-Convert FlatBuffer LZ4 back to JSONL
+### any2jsonl
+Convert any format to JSONL (human-readable debugging format).
 
 ```bash
-go run fb-lz42jsonl.go -input data.fb.lz4 -output data.jsonl
+# Build once
+go build any2jsonl.go
+
+# Convert to plain JSONL
+./any2jsonl data.parquet              # → data.jsonl
+
+# With compression (recommended)
+./any2jsonl --zst data.parquet        # → data.jsonl.zst (RECOMMENDED)
+./any2jsonl --gz data.fb              # → data.jsonl.gz
+./any2jsonl --lz4 data.msgpack        # → data.jsonl.lz4
 ```
 
-### parquet2fb-lz4
-Convert Parquet to FlatBuffer LZ4 format
+**Supported inputs:** Parquet, FlatBuffer, MsgPack, CSV (all with compression)
+**Performance:** 1.91s read, 0.84s write, 43MB with Zstd
+**Best for:** Debugging, data inspection, text processing with grep/jq
+
+## Quick Start
 
 ```bash
-go run parquet2fb-lz4.go -input data.parquet -output data.fb.lz4
+# 1. See example usage
+cd examples/
+cat README.md
+
+# 2. Test with sample data (100 records)
+cd ..
+./any2parquet examples/sample-data.jsonl examples/test.parquet
+./any2jsonl examples/test.parquet examples/output.jsonl
+
+# 3. Convert your own data
+./any2parquet --lz4 mydata.csv.gz mydata.parquet.lz4
 ```
 
-**Why convert from Parquet?**
-- Parquet: Great for columnar analytics, slow for row-oriented reads
-- FlatBuffer + LZ4: 3-10x faster for row-oriented access (APIs, services)
+## Compression Options
+
+All converters auto-detect input compression and support output compression:
+
+- **Gzip (.gz)** - Standard, widely supported, slow
+- **Zstandard (.zst)** - RECOMMENDED: best balance of speed & compression
+- **LZ4 (.lz4)** - Fastest compression, moderate compression ratio
+- **Brotli (.br)** - Best compression, very slow
+- **XZ (.xz)** - Excellent compression, extremely slow (avoid)
 
 ## Format Selection Guide
 
-### Use Parquet when:
-- Running analytical queries (SQL, aggregations, filters)
-- Working with BI tools (Tableau, Looker, Power BI)
-- Processing with big data frameworks (Spark, DuckDB, Pandas)
-- Need columnar access patterns
-- **Read performance: 0.11s for 1M records (17x faster than JSONL)**
+### 🏆 Use Parquet (any2parquet) for:
+- **Everything** - APIs, analytics, data warehouses, ML pipelines
+- Industry standard (Spark, DuckDB, Pandas, Arrow, all major tools)
+- Best overall: 0.15s read, 0.46s write, 44MB for 1M records
+- Columnar format: Extremely fast for queries, aggregations, filters
 
-### Use FlatBuffer + LZ4 when:
-- Building APIs serving data
-- Real-time systems requiring low latency
-- Row-oriented access patterns
-- Message queues, caches, RPCs
-- **Read performance: 0.19s for 1M records (10x faster than JSONL)**
+### ⚡ Use FlatBuffer (any2fb) when:
+- Read speed is absolutely critical and storage is unlimited
+- Hot data paths with very high-frequency reads
+- 0.06s read (2.5x faster than Parquet), but 160MB uncompressed
+- Use --lz4 flag: 0.21s read, 66MB (still 1.5x larger than Parquet)
+- Only use if Parquet isn't available in your stack
 
-### Use JSONL when:
-- Need human-readable format
-- Debugging/inspecting data
-- Simple line-by-line processing
-- Text-based tools (grep, sed, awk)
-- **Read performance: 1.82s for 1M records**
+### 📄 Use JSONL (any2jsonl) when:
+- Debugging/inspecting data (human-readable)
+- Need text processing tools (grep, jq, sed, awk)
+- Always use --zst flag: 1.91s read, 43MB (vs 1.93s, 156MB plain)
+- Never use for production - much slower than binary formats
 
-## Performance Comparison
+## Performance Comparison (1M records)
 
-| Format | Read (1M records) | Best For |
-|--------|------------------|----------|
-| **Parquet** | **0.11s** 🏆 | Analytics, data warehouses, SQL queries |
-| **FlatBuffer + LZ4** | **0.19s** ⭐ | APIs, services, real-time systems |
-| MsgPack + Zstd | 0.57s | Binary serialization |
-| JSONL + Zstd | 1.82s | Human-readable logs |
+| Format | Read | Write | Total | Size | Best For |
+|--------|------|-------|-------|------|----------|
+| **Parquet** 🏆 | **0.15s** | **0.46s** | **0.61s** | **44MB** | **Everything** |
+| FlatBuffer Plain | 0.06s | 0.78s | 0.84s | 160MB | Fastest reads only |
+| FlatBuffer + LZ4 | 0.21s | 1.11s | 1.32s | 66MB | Fast reads (no Parquet) |
+| JSONL + Zstd | 1.91s | 0.84s | 2.75s | 43MB | Debugging |
 
-See full benchmarks in `/benchmarks/serialization-benchmark-result.md`
+Full benchmarks: [serialization-benchmark-result.md](../benchmarks/serialization-benchmark-result.md)
+
+## Example Data
+
+Pre-generated sample files in `examples/` directory:
+- 100 records with realistic fake data (gofakeit v7)
+- All formats: JSONL, CSV, Parquet, FlatBuffer
+- All compressions: .gz, .zst, .lz4
+- Total size: 108KB
+- See `examples/README.md` for usage examples
+
+## Building
+
+```bash
+# Build all converters
+go build any2parquet.go
+go build any2fb.go
+go build any2jsonl.go
+
+# Or build specific converter
+go build any2parquet.go
+```
+
+Binaries are ~46MB each (includes all format libraries).
+
+## Notes
+
+- All converters assume TestRecord schema (id, name, email, age, score, active, category, timestamp)
+- Input compression auto-detected by file extension
+- Output filenames auto-generated if not specified
+- For custom schemas, modify the converter Go files
