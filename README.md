@@ -132,7 +132,7 @@ stat.Finish()   // Final summary
 |--------|-----------|------|-------|----------|-------------|
 | 📄 **CSV** | `.csv`, `.tsv` | ✅ | ✅ | Excel compatibility, human-readable | Good |
 | 📝 **JSON Lines** | `.jsonl`, `.ndjson` | ✅ | ✅ | Debugging, wide support | Moderate |
-| 📊 **Apache Parquet** | `.parquet` | ✅ | ✅ | Analytics, columnar queries | **Excellent** |
+| 📊 **Apache Parquet** | `.parquet`, `.pk` | ✅ | ✅ | Analytics, columnar queries | **Excellent** |
 | 🔧 **MessagePack** | `.msgpack`, `.mp` | ✅ | ✅ | Binary efficiency, 2x smaller than JSON | Very Good |
 | ⚡ **FlatBuffer** | `.fb` | ✅ | ✅ | Zero-copy, fastest reads (3x faster) | **Fastest** |
 

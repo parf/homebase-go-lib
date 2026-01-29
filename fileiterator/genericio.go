@@ -28,10 +28,10 @@ func ReadInput(filename string) ([]map[string]any, error) {
 		return readMsgPack(filename)
 	case ".csv":
 		return readCSV(filename)
-	case ".parquet":
+	case ".parquet", ".pk":
 		return readParquetGeneric(filename)
 	default:
-		return nil, fmt.Errorf("unsupported input format: %s (supported: .jsonl, .csv, .msgpack, .parquet)", ext)
+		return nil, fmt.Errorf("unsupported input format: %s (supported: .jsonl, .csv, .msgpack, .parquet/.pk)", ext)
 	}
 }
 
@@ -143,10 +143,10 @@ func WriteOutput(filename string, records []map[string]any) error {
 		return writeMsgPack(filename, records)
 	case ".csv":
 		return writeCSV(filename, records)
-	case ".parquet":
+	case ".parquet", ".pk":
 		return WriteParquetAny(filename, records)
 	default:
-		return fmt.Errorf("unsupported output format: %s (supported: .jsonl, .csv, .msgpack, .parquet)", ext)
+		return fmt.Errorf("unsupported output format: %s (supported: .jsonl, .csv, .msgpack, .parquet/.pk)", ext)
 	}
 }
 
