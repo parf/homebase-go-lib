@@ -3,13 +3,16 @@ package compression_test
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4/v4"
 	"github.com/parf/homebase-go-lib/internal/compression"
+	"github.com/ulikunitz/xz"
 )
 
 func TestLoadBinGzFile(t *testing.T) {
@@ -121,6 +124,84 @@ func TestIterateLinesLz4(t *testing.T) {
 
 	var lines []string
 	compression.IterateLinesLz4(testFile, func(line string) {
+		lines = append(lines, line)
+	})
+
+	if len(lines) != 3 {
+		t.Errorf("Expected 3 lines, got %d", len(lines))
+	}
+}
+
+func TestLoadBinBrotliFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.bin.br")
+	testData := []byte("Test Brotli data")
+
+	f, _ := os.Create(testFile)
+	brw := brotli.NewWriter(f)
+	brw.Write(testData)
+	brw.Close()
+	f.Close()
+
+	var result []byte
+	compression.LoadBinBrotliFile(testFile, &result)
+
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Expected %s, got %s", testData, result)
+	}
+}
+
+func TestIterateLinesBrotli(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.br")
+
+	f, _ := os.Create(testFile)
+	brw := brotli.NewWriter(f)
+	brw.Write([]byte("Line 1\nLine 2\nLine 3\n"))
+	brw.Close()
+	f.Close()
+
+	var lines []string
+	compression.IterateLinesBrotli(testFile, func(line string) {
+		lines = append(lines, line)
+	})
+
+	if len(lines) != 3 {
+		t.Errorf("Expected 3 lines, got %d", len(lines))
+	}
+}
+
+func TestLoadBinXzFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.bin.xz")
+	testData := []byte("Test XZ data")
+
+	f, _ := os.Create(testFile)
+	xzw, _ := xz.NewWriter(f)
+	xzw.Write(testData)
+	xzw.Close()
+	f.Close()
+
+	var result []byte
+	compression.LoadBinXzFile(testFile, &result)
+
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Expected %s, got %s", testData, result)
+	}
+}
+
+func TestIterateLinesXz(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt.xz")
+
+	f, _ := os.Create(testFile)
+	xzw, _ := xz.NewWriter(f)
+	io.WriteString(xzw, "Line 1\nLine 2\nLine 3\n")
+	xzw.Close()
+	f.Close()
+
+	var lines []string
+	compression.IterateLinesXz(testFile, func(line string) {
 		lines = append(lines, line)
 	})
 

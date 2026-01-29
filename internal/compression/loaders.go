@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4/v4"
+	"github.com/ulikunitz/xz"
 )
 
 // openFileOrURL opens a file or HTTP URL and returns an io.ReadCloser
@@ -132,6 +134,72 @@ func IterateLinesLz4(filename string, processor func(string)) {
 
 	fz := lz4.NewReader(fi)
 	scanner := bufio.NewScanner(fz)
+	count := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		processor(line)
+		count++
+	}
+	fmt.Printf("File %s. Lines processed: %d\n", filename, count)
+}
+
+// LoadBinBrotliFile loads a Brotli-compressed file into a byte buffer
+func LoadBinBrotliFile(filename string, dest *[]byte) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	br := brotli.NewReader(fi)
+	var err error
+	*dest, err = ioutil.ReadAll(br)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("File %s loaded. %d bytes\n", filename, len(*dest))
+}
+
+// IterateLinesBrotli processes lines in a Brotli-compressed file
+func IterateLinesBrotli(filename string, processor func(string)) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	br := brotli.NewReader(fi)
+	scanner := bufio.NewScanner(br)
+	count := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		processor(line)
+		count++
+	}
+	fmt.Printf("File %s. Lines processed: %d\n", filename, count)
+}
+
+// LoadBinXzFile loads an XZ-compressed file into a byte buffer
+func LoadBinXzFile(filename string, dest *[]byte) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	xzr, err := xz.NewReader(fi)
+	if err != nil {
+		panic(err)
+	}
+	*dest, err = ioutil.ReadAll(xzr)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("File %s loaded. %d bytes\n", filename, len(*dest))
+}
+
+// IterateLinesXz processes lines in an XZ-compressed file
+func IterateLinesXz(filename string, processor func(string)) {
+	fi := openFileOrURL(filename)
+	defer fi.Close()
+
+	xzr, err := xz.NewReader(fi)
+	if err != nil {
+		fmt.Printf("File %s\n", filename)
+		panic(err)
+	}
+	scanner := bufio.NewScanner(xzr)
 	count := 0
 	for scanner.Scan() {
 		line := scanner.Text()

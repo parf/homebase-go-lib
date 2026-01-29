@@ -37,6 +37,24 @@ var data []byte
 compression.LoadBinLz4File("file.bin.lz4", &data)
 ```
 
+#### LoadBinBrotliFile(filename string, dest *[]byte)
+
+Load Brotli-compressed binary file explicitly.
+
+```go
+var data []byte
+compression.LoadBinBrotliFile("file.bin.br", &data)
+```
+
+#### LoadBinXzFile(filename string, dest *[]byte)
+
+Load XZ-compressed binary file explicitly.
+
+```go
+var data []byte
+compression.LoadBinXzFile("file.bin.xz", &data)
+```
+
 ### Text File Loaders
 
 #### LoadLinesGzFile(filename string, processor func(string))
@@ -69,6 +87,26 @@ compression.IterateLinesLz4("file.txt.lz4", func(line string) {
 })
 ```
 
+#### IterateLinesBrotli(filename string, processor func(string))
+
+Process lines in a Brotli-compressed text file.
+
+```go
+compression.IterateLinesBrotli("file.txt.br", func(line string) {
+    fmt.Println(line)
+})
+```
+
+#### IterateLinesXz(filename string, processor func(string))
+
+Process lines in an XZ-compressed text file.
+
+```go
+compression.IterateLinesXz("file.txt.xz", func(line string) {
+    fmt.Println(line)
+})
+```
+
 ### Special Format Loaders
 
 #### LoadIDTabGzFile(filename string, processor func(int32, string))
@@ -86,10 +124,13 @@ compression.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
 **All functions from this package are now available in `fileiterator` package.**
 
 Use `github.com/parf/homebase-go-lib/fileiterator` instead:
-- LoadBinGzFile, LoadBinZstdFile, LoadBinLz4File
-- IterateLinesGz, IterateLinesZstd, IterateLinesLz4
+- LoadBinFile with auto-detection (supports all 7 formats)
+- IterateLines with auto-detection (supports all 7 formats)
 - IterateIDTabFile (auto-detects all compression formats)
 - IterateBinaryRecords and explicit format iterators
+
+The fileiterator package provides automatic compression detection via FUOpen,
+eliminating the need for format-specific functions in most cases.
 
 This internal package is kept for backward compatibility within the module only.
 
@@ -158,10 +199,15 @@ compression.IterateZlibRecords("data.bin.zlib", 10, processor)
 
 ## Supported Formats
 
+All 7 compression formats with explicit loaders:
+
 - **Gzip** (.gz) - Standard gzip compression (RFC 1952)
 - **Zstd** (.zst) - Zstandard compression (modern, faster)
 - **Zlib** (.zlib, .zz) - Zlib compression (RFC 1950)
 - **LZ4** (.lz4) - Fast compression algorithm
+- **Brotli** (.br) - Modern web compression
+- **XZ** (.xz) - High compression ratio
+- Plain files (no compression)
 
 ## URL Support
 

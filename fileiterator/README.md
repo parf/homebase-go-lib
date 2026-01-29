@@ -8,11 +8,11 @@ The `fileiterator` package provides high-level iterators for structured file for
 - **File loaders** with automatic compression detection
 - **JSONL (JSON Lines)** support with typed and untyped parsing
 - **CSV** support with flexible options and map-based iteration
-- **Automatic compression** detection (.gz, .zst, .zlib)
-- **Explicit format** loaders when you need control
+- **Automatic compression** detection (7 formats: .gz, .zst, .zlib, .lz4, .br, .xz, plain)
 - **URL support** - works with both local files and HTTP/HTTPS URLs
 - **Error handling** with detailed error messages (line/row numbers)
 - **Progress tracking** - prints row/line counts
+- **Streaming processing** - low memory usage for large files
 
 ## File Loaders
 
@@ -20,12 +20,21 @@ The `fileiterator` package provides high-level iterators for structured file for
 
 #### FUOpen - Open with Auto-Decompression
 
-Opens a file or URL and returns an `io.ReadCloser` with automatic decompression:
+Opens a file or URL and returns an `io.ReadCloser` with automatic decompression.
+
+Supports 7 compression formats:
+- Gzip (.gz)
+- Zstd (.zst)
+- Zlib (.zlib, .zz)
+- LZ4 (.lz4)
+- Brotli (.br)
+- XZ (.xz)
+- Plain files
 
 ```go
 import "github.com/parf/homebase-go-lib/fileiterator"
 
-// Automatically decompresses .gz and .zst files
+// Automatically decompresses based on file extension
 r := fileiterator.FUOpen("data.txt.gz")
 defer r.Close()
 data, _ := io.ReadAll(r)
@@ -51,26 +60,12 @@ fileiterator.IterateLines("log.txt.zst", func(line string) {
 })
 ```
 
-### Explicit Format Loaders
+#### IterateIDTabFile - Process Tab-Separated ID-Name Pairs
 
-When you need explicit control over the compression format:
+Process tab-separated files where IDs are hexadecimal int32 and names are lowercased:
 
 ```go
-// Gzip loaders
-var data []byte
-fileiterator.LoadBinGzFile("data.bin.gz", &data)
-fileiterator.IterateLinesGz("log.txt.gz", func(line string) {
-    fmt.Println(line)
-})
-
-// Zstd loaders
-fileiterator.LoadBinZstdFile("data.bin.zst", &data)
-fileiterator.IterateLinesZstd("log.txt.zst", func(line string) {
-    fmt.Println(line)
-})
-
-// Special: Tab-separated ID-Name pairs (hex ID)
-fileiterator.LoadIDTabGzFile("ids.tab.gz", func(id int32, name string) {
+fileiterator.IterateIDTabFile("ids.tab.gz", func(id int32, name string) {
     fmt.Printf("ID: %x, Name: %s\n", id, name)
 })
 ```
@@ -145,11 +140,15 @@ err := fileiterator.IterateJSONLTyped("users.jsonl", func(user User) error {
 })
 ```
 
-**Supports:**
-- Plain JSONL files: `data.jsonl`
-- Gzipped: `data.jsonl.gz`
+**Supports all 7 compression formats:**
+- Plain: `data.jsonl`
+- Gzip: `data.jsonl.gz`
 - Zstd: `data.jsonl.zst`
-- URLs: `http://example.com/data.jsonl.gz`
+- Zlib: `data.jsonl.zlib` or `.zz`
+- LZ4: `data.jsonl.lz4`
+- Brotli: `data.jsonl.br`
+- XZ: `data.jsonl.xz`
+- URLs: `http://example.com/data.jsonl.gz` (any format)
 
 ## CSV Support
 
@@ -190,13 +189,17 @@ err := fileiterator.IterateCSVMap("users.csv", fileiterator.DefaultCSVOptions(),
 })
 ```
 
-**Supports:**
-- Plain CSV files: `data.csv`
-- Gzipped: `data.csv.gz`
+**Supports all 7 compression formats:**
+- Plain: `data.csv`
+- Gzip: `data.csv.gz`
 - Zstd: `data.csv.zst`
-- URLs: `http://example.com/data.csv.gz`
+- Zlib: `data.csv.zlib` or `.zz`
+- LZ4: `data.csv.lz4`
+- Brotli: `data.csv.br`
+- XZ: `data.csv.xz`
+- URLs: `http://example.com/data.csv.gz` (any format)
 - TSV (tab-separated) - set `Comma` to `'\t'`
-- Custom delimiters
+- Custom delimiters (pipe, semicolon, etc.)
 
 ## Examples
 
@@ -280,11 +283,18 @@ if err != nil {
 
 ## Compression Support
 
-All functions automatically detect compression by file extension:
-- **Gzip** (.gz) - Standard gzip compression
-- **Zstd** (.zst) - Modern, faster compression
+All functions automatically detect compression by file extension.
 
-No special code needed - just use compressed files directly.
+**7 formats supported:**
+- **Gzip** (.gz) - Standard gzip compression (RFC 1952)
+- **Zstd** (.zst) - Modern, faster compression
+- **Zlib** (.zlib, .zz) - Zlib compression (RFC 1950)
+- **LZ4** (.lz4) - Fast compression algorithm
+- **Brotli** (.br) - Modern web compression
+- **XZ** (.xz) - High compression ratio
+- **Plain files** - No compression
+
+**No special code needed** - just use compressed files directly. The library automatically detects the format and decompresses on-the-fly.
 
 ## URL Support
 
