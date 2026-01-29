@@ -1,0 +1,5 @@
+{"sensor":"temp-01","value":23.5,"unit":"celsius","online":true,"location":"server-room"}
+{"sensor":"pressure-02","value":1013.25,"unit":"hPa","online":false,"location":"warehouse"}
+{"sensor":"humidity-03","value":65.2,"unit":"percent","online":true,"location":"server-room"}
+{"sensor":"temp-04","value":19.8,"unit":"celsius","online":true,"location":"office"}
+{"sensor":"co2-05","value":420,"unit":"ppm","online":true,"location":"conference-room"}

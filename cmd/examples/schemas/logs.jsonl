@@ -1,0 +1,5 @@
+{"timestamp":1640995200,"level":"info","message":"User login successful","user_id":1001,"service":"auth"}
+{"timestamp":1640995205,"level":"error","message":"Database connection failed","user_id":1002,"service":"backend"}
+{"timestamp":1640995210,"level":"warn","message":"High memory usage detected","user_id":1003,"service":"monitor"}
+{"timestamp":1640995215,"level":"info","message":"Payment processed","user_id":1004,"service":"payment"}
+{"timestamp":1640995220,"level":"debug","message":"Cache miss for key user:1005","user_id":1005,"service":"cache"}

@@ -1,0 +1,5 @@
+{"txn_id":"TX001","amount":1250.50,"currency":"USD","status":"completed","merchant":"Amazon"}
+{"txn_id":"TX002","amount":75.99,"currency":"EUR","status":"pending","merchant":"Apple Store"}
+{"txn_id":"TX003","amount":3500.00,"currency":"GBP","status":"completed","merchant":"Tesla"}
+{"txn_id":"TX004","amount":49.99,"currency":"USD","status":"failed","merchant":"Netflix"}
+{"txn_id":"TX005","amount":199.00,"currency":"CAD","status":"completed","merchant":"Best Buy"}
