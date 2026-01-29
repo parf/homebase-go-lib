@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,8 +21,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Supported input formats (recognized extension → format):\n")
 		fmt.Fprintf(os.Stderr, "  - JSONL: JSON Lines, one JSON object per line → .jsonl\n")
 		fmt.Fprintf(os.Stderr, "  - CSV: Comma-separated values with header row → .csv, .tsv, .psv\n")
-		fmt.Fprintf(os.Stderr, "  - MsgPack: Binary serialization format → .msgpack\n")
-		fmt.Fprintf(os.Stderr, "  - FlatBuffer: Zero-copy binary format → .fb\n\n")
+		fmt.Fprintf(os.Stderr, "  - MsgPack: Binary serialization format → .msgpack\n\n")
 
 		fmt.Fprintf(os.Stderr, "Input compression formats (recognized extension → format):\n")
 		fmt.Fprintf(os.Stderr, "  .gz  → Gzip (standard compression, widely supported, slow)\n")
@@ -86,7 +83,7 @@ func main() {
 		for _, ext := range []string{".gz", ".zst", ".lz4", ".br", ".xz"} {
 			outputFile = strings.TrimSuffix(outputFile, ext)
 		}
-		for _, ext := range []string{".jsonl", ".csv", ".msgpack", ".fb"} {
+		for _, ext := range []string{".jsonl", ".csv", ".msgpack"} {
 			outputFile = strings.TrimSuffix(outputFile, ext)
 		}
 		outputFile += ".parquet"
@@ -94,8 +91,8 @@ func main() {
 
 	fmt.Printf("Converting %s -> %s\n", inputFile, outputFile)
 
-	// Read all records from input (as generic map[string]any)
-	records, err := readInput(inputFile)
+	// Read all records from input (supports ANY schema)
+	records, err := fileiterator.ReadInput(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
 		os.Exit(1)
@@ -104,7 +101,6 @@ func main() {
 	fmt.Printf("Read %d records\n", len(records))
 
 	// Write to Parquet (compression auto-detected from filename)
-	// Uses WriteParquetAny to support ANY schema
 	if err := fileiterator.WriteParquetAny(outputFile, records); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing Parquet: %v\n", err)
 		os.Exit(1)
@@ -112,121 +108,4 @@ func main() {
 
 	stat, _ := os.Stat(outputFile)
 	fmt.Printf("Written %s (%d bytes, %.2f MB)\n", outputFile, stat.Size(), float64(stat.Size())/1024/1024)
-}
-
-func readInput(filename string) ([]map[string]any, error) {
-	lower := strings.ToLower(filename)
-
-	if strings.Contains(lower, ".fb") {
-		return readFlatBuffer(filename)
-	} else if strings.Contains(lower, ".msgpack") {
-		return readMsgPack(filename)
-	} else if strings.Contains(lower, ".csv") {
-		return readCSV(filename)
-	} else if strings.Contains(lower, ".jsonl") {
-		return readJSONL(filename)
-	}
-
-	return nil, fmt.Errorf("unsupported input format: %s", filename)
-}
-
-func readJSONL(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateJSONL(filename, func(line map[string]any) error {
-		records = append(records, line)
-		return nil
-	})
-	return records, err
-}
-
-func readCSV(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-
-	reader := fileiterator.FUOpen(filename)
-	defer reader.Close()
-
-	csvReader := csv.NewReader(reader)
-
-	// Detect delimiter
-	if strings.Contains(filename, ".tsv") {
-		csvReader.Comma = '\t'
-	} else if strings.Contains(filename, ".psv") {
-		csvReader.Comma = '|'
-	}
-
-	// Read header to get field names
-	header, err := csvReader.Read()
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		row, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Create map from header and row
-		record := make(map[string]any)
-		for i, fieldName := range header {
-			if i < len(row) {
-				// Try to infer type from value
-				value := row[i]
-				record[fieldName] = inferCSVType(value)
-			}
-		}
-
-		records = append(records, record)
-	}
-
-	return records, nil
-}
-
-// inferCSVType tries to infer the type of a CSV value
-func inferCSVType(value string) any {
-	// Try bool
-	if value == "true" {
-		return true
-	}
-	if value == "false" {
-		return false
-	}
-
-	// Try int64
-	var i int64
-	if _, err := fmt.Sscanf(value, "%d", &i); err == nil && !strings.Contains(value, ".") {
-		return i
-	}
-
-	// Try float64
-	var f float64
-	if _, err := fmt.Sscanf(value, "%f", &f); err == nil {
-		return f
-	}
-
-	// Default to string
-	return value
-}
-
-func readMsgPack(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateMsgPack(filename, func(data any) error {
-		if m, ok := data.(map[string]any); ok {
-			records = append(records, m)
-		}
-		return nil
-	})
-	return records, err
-}
-
-func readFlatBuffer(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateFlatBufferList(filename, func(data []byte) error {
-		// Note: Simplified - would need full FlatBuffer parsing with generated code
-		return fmt.Errorf("FlatBuffer reading not yet fully implemented - use JSONL, CSV, or MsgPack instead")
-	})
-	return records, err
 }

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,10 +27,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  https://github.com/parf/homebase-go-lib/blob/main/benchmarks/serialization-benchmark-result.md\n\n")
 
 		fmt.Fprintf(os.Stderr, "Supported input formats (recognized extension → format):\n")
-		fmt.Fprintf(os.Stderr, "  - Parquet: Columnar binary format → .parquet\n")
-		fmt.Fprintf(os.Stderr, "  - FlatBuffer: Zero-copy binary format → .fb\n")
-		fmt.Fprintf(os.Stderr, "  - MsgPack: Binary serialization → .msgpack\n")
-		fmt.Fprintf(os.Stderr, "  - CSV: Comma-separated values → .csv, .tsv, .psv\n\n")
+		fmt.Fprintf(os.Stderr, "  .parquet → Columnar binary format\n")
+		fmt.Fprintf(os.Stderr, "  .msgpack → Binary serialization\n")
+		fmt.Fprintf(os.Stderr, "  .csv     → Comma-separated values\n\n")
 
 		fmt.Fprintf(os.Stderr, "Input compression formats (recognized extension → format):\n")
 		fmt.Fprintf(os.Stderr, "  .gz  → Gzip (standard compression, widely supported, slow)\n")
@@ -62,8 +58,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  JSONL+LZ4:    64MB, 1.97s read, 0.88s write (fastest)\n\n")
 
 		fmt.Fprintf(os.Stderr, "Schema Support:\n")
-		fmt.Fprintf(os.Stderr, "  Automatically handles ANY structure - no schema required!\n")
-		fmt.Fprintf(os.Stderr, "  Preserves all fields and types from input data.\n\n")
+		fmt.Fprintf(os.Stderr, "  ✅ Automatically handles ANY structure - no schema required!\n")
+		fmt.Fprintf(os.Stderr, "  ✅ Preserves all fields and types from input data.\n\n")
 
 		fmt.Fprintf(os.Stderr, "See also: ./any2parquet (convert to efficient Parquet format)\n")
 		os.Exit(1)
@@ -78,7 +74,7 @@ func main() {
 		for _, ext := range []string{".gz", ".zst", ".lz4", ".br", ".xz"} {
 			outputFile = strings.TrimSuffix(outputFile, ext)
 		}
-		for _, ext := range []string{".parquet", ".fb", ".msgpack", ".csv"} {
+		for _, ext := range []string{".parquet", ".msgpack", ".csv"} {
 			outputFile = strings.TrimSuffix(outputFile, ext)
 		}
 		outputFile += ".jsonl"
@@ -86,8 +82,8 @@ func main() {
 
 	fmt.Printf("Converting %s -> %s\n", inputFile, outputFile)
 
-	// Read all records from input (as generic map[string]any)
-	records, err := readInput(inputFile)
+	// Read all records from input (supports ANY schema)
+	records, err := fileiterator.ReadInput(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
 		os.Exit(1)
@@ -95,143 +91,12 @@ func main() {
 
 	fmt.Printf("Read %d records\n", len(records))
 
-	// Write to JSONL
-	if err := writeJSONL(outputFile, records); err != nil {
+	// Write to JSONL (compression auto-detected from filename)
+	if err := fileiterator.WriteOutput(outputFile, records); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing JSONL: %v\n", err)
 		os.Exit(1)
 	}
 
 	stat, _ := os.Stat(outputFile)
 	fmt.Printf("Written %s (%d bytes, %.2f MB)\n", outputFile, stat.Size(), float64(stat.Size())/1024/1024)
-}
-
-func readInput(filename string) ([]map[string]any, error) {
-	lower := strings.ToLower(filename)
-
-	if strings.Contains(lower, ".parquet") {
-		return readParquet(filename)
-	} else if strings.Contains(lower, ".fb") {
-		return readFlatBuffer(filename)
-	} else if strings.Contains(lower, ".msgpack") {
-		return readMsgPack(filename)
-	} else if strings.Contains(lower, ".csv") {
-		return readCSV(filename)
-	}
-
-	return nil, fmt.Errorf("unsupported input format: %s", filename)
-}
-
-func readParquet(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateParquetAny(filename, func(record map[string]any) error {
-		records = append(records, record)
-		return nil
-	})
-	return records, err
-}
-
-func readFlatBuffer(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateFlatBufferList(filename, func(data []byte) error {
-		// Note: Simplified - would need full FlatBuffer parsing with generated code
-		return fmt.Errorf("FlatBuffer reading not fully implemented - use Parquet or MsgPack instead")
-	})
-	return records, err
-}
-
-func readMsgPack(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-	err := fileiterator.IterateMsgPack(filename, func(data any) error {
-		if m, ok := data.(map[string]any); ok {
-			records = append(records, m)
-		}
-		return nil
-	})
-	return records, err
-}
-
-func readCSV(filename string) ([]map[string]any, error) {
-	var records []map[string]any
-
-	reader := fileiterator.FUOpen(filename)
-	defer reader.Close()
-
-	csvReader := csv.NewReader(reader)
-
-	// Detect delimiter
-	if strings.Contains(filename, ".tsv") {
-		csvReader.Comma = '\t'
-	} else if strings.Contains(filename, ".psv") {
-		csvReader.Comma = '|'
-	}
-
-	// Read header to get field names
-	header, err := csvReader.Read()
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		row, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Create map from header and row
-		record := make(map[string]any)
-		for i, fieldName := range header {
-			if i < len(row) {
-				// Try to infer type from value
-				value := row[i]
-				record[fieldName] = inferCSVType(value)
-			}
-		}
-
-		records = append(records, record)
-	}
-
-	return records, nil
-}
-
-// inferCSVType tries to infer the type of a CSV value
-func inferCSVType(value string) any {
-	// Try bool
-	if value == "true" {
-		return true
-	}
-	if value == "false" {
-		return false
-	}
-
-	// Try int64
-	var i int64
-	if _, err := fmt.Sscanf(value, "%d", &i); err == nil && !strings.Contains(value, ".") {
-		return i
-	}
-
-	// Try float64
-	var f float64
-	if _, err := fmt.Sscanf(value, "%f", &f); err == nil {
-		return f
-	}
-
-	// Default to string
-	return value
-}
-
-func writeJSONL(filename string, records []map[string]any) error {
-	writer := fileiterator.FUCreate(filename)
-	defer writer.Close()
-
-	encoder := json.NewEncoder(writer)
-	for _, rec := range records {
-		if err := encoder.Encode(rec); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
