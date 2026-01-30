@@ -13,6 +13,27 @@ A comprehensive toolkit for building data pipelines, ETL workflows, and command-
 
 ---
 
+## 🛠️ Bundled Utilities
+
+Command-line tools for data conversion and database import/export with comprehensive SQL support.
+
+| Utility | Description |
+|---------|-------------|
+| **any2parquet** | Export data to Parquet format (recommended for analytics) |
+| **any2jsonl** | Export data to JSONL format (human-readable, debug-friendly) |
+| **any2csv** | Export data to CSV format (spreadsheet-compatible) |
+| **any2db** | Import data to MySQL/PostgreSQL databases with auto-schema |
+
+**All utilities support:**
+- 🔌 SQL queries from MySQL & PostgreSQL databases
+- 📦 Multiple file formats (Parquet, JSONL, CSV, MsgPack)
+- 🗜️ Compression (.gz, .zst, .lz4, .br, .xz)
+- 🔄 Stdout piping with `-` for data pipelines
+
+**[📖 Full Documentation & Examples →](cmd/README.md)**
+
+---
+
 ## 🌟 Key Features
 
 <table>
