@@ -179,3 +179,46 @@ func BatchInserter(db *sql.DB, table string, fields string, bufferSize int) (ins
 	}
 	return
 }
+
+// PostgreBatchInserter creates a batch inserter optimized for PostgreSQL.
+// It's functionally identical to BatchInserter but makes the intent clear
+// and can be extended with PostgreSQL-specific optimizations in the future.
+//
+// Usage:
+//
+//	insert, flush := sql.PostgreBatchInserter(db, "schema.table", "col1, col2, col3", 1000)
+//	defer flush()
+//
+//	for ... {
+//		insert([]any{val1, val2, val3})  // Auto-escaped
+//	}
+func PostgreBatchInserter(db *sql.DB, table string, fields string, bufferSize int) (insert func(any), flush func()) {
+	// PostgreSQL uses the same batch insert syntax as MySQL
+	// The EscapeValue function handles standard SQL escaping which works for both
+	return BatchInserter(db, table, fields, bufferSize)
+}
+
+// PostgreBatchDBInserter creates a batch inserter with a new PostgreSQL connection.
+//
+// Usage:
+//
+//	connect_string := "host=localhost port=5432 user=myuser password=mypass dbname=mydb sslmode=disable"
+//	insert, flush := sql.PostgreBatchDBInserter(connect_string, "schema.table", "col1, col2, col3", 1000)
+//	defer flush()
+//
+//	for ... {
+//		insert([]any{val1, val2, val3})
+//	}
+func PostgreBatchDBInserter(dsn, table, fields string, bufferSize int) (insert func(any), flushClose func()) {
+	_db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		panic(err)
+	}
+	insert, flush := PostgreBatchInserter(_db, table, fields, bufferSize)
+	flushClose = func() {
+		flush()
+		_db.Close()
+	}
+	return
+}
+
