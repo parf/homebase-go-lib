@@ -11,18 +11,23 @@ Convert any format to Parquet - the best overall format for everything.
 # Build once
 go build any2parquet.go
 
-# Convert any format to Parquet
+# Convert files to Parquet
 ./any2parquet data.jsonl              # → data.parquet
 ./any2parquet data.csv.gz             # → data.parquet
 ./any2parquet data.msgpack.zst        # → data.parquet
 
 # With LZ4 compression (optional, even smaller)
 ./any2parquet --lz4 data.jsonl        # → data.parquet.lz4
+
+# Query MySQL/PostgreSQL databases to Parquet
+./any2parquet --dsn="user:pass@localhost" --sql="SELECT * FROM users"
+./any2parquet --dsn="user:pass@localhost" --table="mydb.users"
+./any2parquet --driver=postgre --dsn="host=pg user=x password=y" --table="public.orders"
 ```
 
-**Supported inputs:** JSONL, CSV, MsgPack, FlatBuffer (all with compression)
+**Supported inputs:** JSONL, CSV, MsgPack, FlatBuffer, **SQL databases** (MySQL, PostgreSQL)
 **Performance:** 0.15s read, 0.46s write, 44MB for 1M records
-**Best for:** Everything - APIs, analytics, data warehouses, ML pipelines
+**Best for:** Everything - APIs, analytics, data warehouses, ML pipelines, **database exports**
 
 ### any2fb
 Convert any format to FlatBuffer (fastest reads, but larger files).
@@ -51,18 +56,23 @@ Convert any format to JSONL (human-readable debugging format).
 # Build once
 go build any2jsonl.go
 
-# Convert to plain JSONL
+# Convert files to plain JSONL
 ./any2jsonl data.parquet              # → data.jsonl
 
 # With compression (recommended)
 ./any2jsonl --zst data.parquet        # → data.jsonl.zst (RECOMMENDED)
 ./any2jsonl --gz data.fb              # → data.jsonl.gz
 ./any2jsonl --lz4 data.msgpack        # → data.jsonl.lz4
+
+# Query MySQL/PostgreSQL databases
+./any2jsonl --dsn="user:pass@localhost" --sql="SELECT * FROM users"
+./any2jsonl --dsn="user:pass@localhost" --table="mydb.users"
+./any2jsonl --driver=postgre --dsn="host=localhost user=x password=y" --table="public.orders"
 ```
 
-**Supported inputs:** Parquet, FlatBuffer, MsgPack, CSV (all with compression)
+**Supported inputs:** Parquet, FlatBuffer, MsgPack, CSV, **SQL databases** (MySQL, PostgreSQL)
 **Performance:** 1.91s read, 0.84s write, 43MB with Zstd
-**Best for:** Debugging, data inspection, text processing with grep/jq
+**Best for:** Debugging, data inspection, text processing with grep/jq, **database exports**
 
 ## Quick Start
 
@@ -79,6 +89,80 @@ cd ..
 # 3. Convert your own data
 ./any2parquet --lz4 mydata.csv.gz mydata.parquet.lz4
 ```
+
+## SQL Database Support 🆕
+
+Export data directly from MySQL or PostgreSQL databases to JSONL or Parquet formats.
+
+### Basic Usage
+
+```bash
+# MySQL with simplified DSN (auto-expanded to full format)
+./any2jsonl --dsn="user:pass@host" --sql="SELECT * FROM users"
+./any2parquet --dsn="root:password@localhost" --table="mydb.orders"
+
+# PostgreSQL
+./any2jsonl --driver=postgre --dsn="host=pg user=x password=y dbname=db" --sql="SELECT * FROM logs"
+./any2parquet --driver=postgre --dsn="user:pass@pghost:5432" --table="public.events"
+
+# With custom output name and compression
+./any2jsonl --dsn="user:pass@host" --table="geo.zip" --name="zipcode s.jsonl.zst"
+./any2parquet --dsn="user:pass@host" --sql="SELECT * FROM orders WHERE date > '2024-01-01'" --name="recent_orders.parquet"
+```
+
+### SQL Flags
+
+- `--sql="SELECT * FROM table"` - SQL query to execute
+- `--table="schema.table"` - Alternative to --sql (generates `SELECT * FROM table`)
+- `--name=output-file` - Output file name (auto-generated from table name if omitted)
+- `--driver=mysql` - Database driver: `mysql` (default) or `postgre`
+- `--dsn="connection-string"` - Database connection string
+
+### DSN Formats
+
+**MySQL:**
+```bash
+# Standard format
+user:password@tcp(host:3306)/database
+
+# Simplified format (auto-expanded)
+user:password@host
+```
+
+**PostgreSQL:**
+```bash
+# Standard format
+host=localhost port=5432 user=myuser password=mypass dbname=mydb sslmode=disable
+
+# Simplified format (auto-expanded)
+user:password@host:5432
+```
+
+### Examples
+
+```bash
+# Export 1000 ZIP codes to JSONL
+./any2jsonl --dsn="parf:mv700@hdb3" --sql="select * from geo.zip limit 1000"
+
+# Export users table to compressed Parquet (83% smaller than JSONL!)
+./any2parquet --dsn="root:password@localhost" --table="mydb.users" --name="users.parquet"
+
+# PostgreSQL with complex query
+./any2jsonl --driver=postgre \
+  --dsn="host=pg.example.com port=5432 user=analyst password=secret dbname=analytics" \
+  --sql="SELECT customer_id, SUM(amount) FROM orders GROUP BY customer_id" \
+  --name="customer_totals.jsonl.zst"
+
+# Export and immediately analyze with jq
+./any2jsonl --dsn="user:pass@host" --sql="SELECT * FROM logs LIMIT 100" | jq '.[] | select(.level == "ERROR")'
+```
+
+### Performance
+
+Real-world test with `geo.zip` table (1000 records):
+- **JSONL output:** 97.8 KB
+- **Parquet output:** 16.9 KB (83% smaller!)
+- Both formats preserve all data and support compression
 
 ## Compression Options
 
@@ -147,7 +231,8 @@ Binaries are ~46MB each (includes all format libraries).
 
 ## Notes
 
-- All converters assume TestRecord schema (id, name, email, age, score, active, category, timestamp)
-- Input compression auto-detected by file extension
-- Output filenames auto-generated if not specified
-- For custom schemas, modify the converter Go files
+- **Schema-agnostic:** Converters automatically handle ANY schema structure
+- **SQL support:** Direct export from MySQL and PostgreSQL databases
+- **Input compression:** Auto-detected by file extension
+- **Output filenames:** Auto-generated if not specified (from table name for SQL queries)
+- **Backward compatible:** Existing file-based conversion continues to work unchanged

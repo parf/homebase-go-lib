@@ -10,6 +10,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/klauspost/compress v1.18.3
+	github.com/lib/pq v1.11.1
 	github.com/pierrec/lz4/v4 v4.1.25
 	github.com/ulikunitz/xz v0.5.15
 	github.com/vmihailenco/msgpack/v5 v5.4.1

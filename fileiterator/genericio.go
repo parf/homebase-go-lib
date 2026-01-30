@@ -1,6 +1,7 @@
 package fileiterator
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	_ "github.com/lib/pq" // PostgreSQL driver
 	msgpack "github.com/vmihailenco/msgpack/v5"
+	hbsql "github.com/parf/homebase-go-lib/sql"
 )
 
 // ReadInput reads any supported format and returns generic records
@@ -210,4 +213,38 @@ func writeCSV(filename string, records []map[string]any) error {
 	}
 
 	return nil
+}
+
+// ReadSQLInput executes a SQL query and returns generic records
+func ReadSQLInput(driver, dsn, query string) ([]map[string]any, error) {
+	// Normalize driver name
+	if driver == "postgre" || driver == "postgresql" {
+		driver = "postgres"
+	}
+
+	// Open database connection
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Execute query using existing WildSqlQuery
+	rows, err := hbsql.WildSqlQuery(db, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	// Convert SqlRows to []map[string]any
+	records := make([]map[string]any, len(rows))
+	for i, row := range rows {
+		records[i] = map[string]any(row)
+	}
+
+	return records, nil
 }
