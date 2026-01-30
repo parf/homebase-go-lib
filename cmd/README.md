@@ -1,6 +1,10 @@
-# Universal Format Converters
+# Universal Data Conversion Utilities
 
-High-performance data format conversion utilities with comprehensive compression support.
+High-performance data format conversion and database import/export utilities with comprehensive SQL and compression support.
+
+## Export Tools
+
+Convert data from files or databases to various output formats:
 
 ## Tools
 
@@ -73,6 +77,58 @@ go build any2jsonl.go
 **Supported inputs:** Parquet, FlatBuffer, MsgPack, CSV, **SQL databases** (MySQL, PostgreSQL)
 **Performance:** 1.91s read, 0.84s write, 43MB with Zstd
 **Best for:** Debugging, data inspection, text processing with grep/jq, **database exports**
+
+### any2csv
+Convert any format to CSV (spreadsheet-compatible format).
+
+```bash
+# Build once
+go build any2csv.go
+
+# Convert files to CSV
+./any2csv data.parquet                # → data.csv
+./any2csv data.jsonl -                # → stdout
+./any2csv data.msgpack output.csv     # → output.csv
+
+# Query MySQL/PostgreSQL databases to CSV
+./any2csv --dsn="user:pass@localhost" --sql="SELECT * FROM users" users.csv
+./any2csv --dsn="root:pass@localhost" --table="mydb.orders" - | head
+./any2csv --driver=postgre --dsn="user:pass@pghost" --table="public.logs" logs.csv
+```
+
+**Supported inputs:** Parquet, JSONL, MsgPack, CSV, **SQL databases** (MySQL, PostgreSQL)
+**Column order:** Alphabetically sorted for consistency
+**Best for:** Excel/Google Sheets, spreadsheet analysis, data exchange, reporting
+
+### any2db
+Import data from files or databases into database tables.
+
+```bash
+# Build once
+go build any2db.go
+
+# Import files to database
+./any2db --dsn="root:pass@localhost/mydb" data.csv users
+./any2db --dsn="root:pass@localhost/mydb" data.parquet orders
+./any2db --driver=postgre --dsn="user:pass@pghost/mydb" data.jsonl public.events
+
+# Copy/transform data between tables
+./any2db --dsn="root:pass@localhost/mydb" --table="old_users" new_users
+./any2db --dsn="root:pass@localhost/mydb" --sql="SELECT * FROM orders WHERE date>'2024-01-01'" orders_2024
+
+# Import with custom batch size
+./any2db --dsn="root:pass@localhost/mydb" --batch=5000 large_file.jsonl.zst events
+```
+
+**Features:**
+- Automatically creates destination table if not exists
+- Infers column types from data (BIGINT, DOUBLE, TEXT, BOOLEAN)
+- Batch inserts for high performance (default: 1000 records)
+- Auto-escapes values to prevent SQL injection
+- Supports MySQL and PostgreSQL
+
+**Supported inputs:** Parquet, JSONL, CSV, MsgPack, **SQL queries** (for table copying)
+**Best for:** Database imports, ETL pipelines, table copying, data migration
 
 ## Quick Start
 
@@ -195,6 +251,20 @@ All converters auto-detect input compression and support output compression:
 - Always use --zst flag: 1.91s read, 43MB (vs 1.93s, 156MB plain)
 - Never use for production - much slower than binary formats
 
+### 📊 Use CSV (any2csv) when:
+- Working with Excel or Google Sheets
+- Need spreadsheet-compatible format
+- Sharing data with non-technical users
+- Generating reports for business users
+- Compatible with all spreadsheet and BI tools
+
+### 💾 Use any2db when:
+- Loading data into MySQL or PostgreSQL databases
+- Building ETL/data pipelines
+- Migrating data between databases
+- Creating database tables from files
+- Bulk importing with automatic schema creation
+
 ## Performance Comparison (1M records)
 
 | Format | Read | Write | Total | Size | Best For |
@@ -218,16 +288,23 @@ Pre-generated sample files in `examples/` directory:
 ## Building
 
 ```bash
-# Build all converters
+# Build all utilities
 go build any2parquet.go
-go build any2fb.go
 go build any2jsonl.go
+go build any2csv.go
+go build any2db.go
+go build any2fb.go
 
-# Or build specific converter
+# Or build specific utility
 go build any2parquet.go
+go build any2db.go
 ```
 
-Binaries are ~46MB each (includes all format libraries).
+**Export utilities:** any2parquet, any2jsonl, any2csv (~46-48MB each)
+**Import utility:** any2db (~46MB)
+**Legacy:** any2fb (FlatBuffer support)
+
+All binaries include format libraries and database drivers.
 
 ## Notes
 
