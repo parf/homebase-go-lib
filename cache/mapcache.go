@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"sort"
@@ -16,6 +17,8 @@ import (
 	"github.com/apache/arrow/go/v14/parquet/metadata"
 	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 )
+
+const kvBatchSize = 1_000_000 // rows per batch (~16-20MB for typical KV rows)
 
 // Map reads a cached map from a parquet file into dest.
 // dest must be a pre-allocated map (e.g., make(map[uint32]string)).
@@ -31,9 +34,24 @@ func Map(filename string, dest any) bool {
 
 // WriteMap writes any map to a parquet cache file.
 // Supports map[K]V where K and V are scalar types.
-// Errors are silently ignored (cache is best-effort).
-func WriteMap(filename string, data any) {
-	_ = writeCache(filename, data)
+func WriteMap(filename string, data any) error {
+	return writeCache(filename, data)
+}
+
+// MapBatchIterate reads a cached parquet file in batches (row groups),
+// populating dest with each batch and calling fn. Dest is cleared between batches.
+// Returns true if file was read successfully, false on miss/error.
+// Memory-efficient: only one row group is loaded at a time.
+//
+// Usage:
+//
+//	m := make(map[uint32]string)
+//	cache.MapBatchIterate("big.parquet", m, func() error {
+//	    for k, v := range m { process(k, v) }
+//	    return nil
+//	})
+func MapBatchIterate(filename string, dest any, fn func() error) bool {
+	return batchIterate(filename, dest, fn) == nil
 }
 
 // --- type inference ---
@@ -514,6 +532,104 @@ func toReflectValue(value any, targetType reflect.Type) reflect.Value {
 		return reflect.ValueOf(fmt.Sprintf("%v", value))
 	}
 	return reflect.Zero(targetType)
+}
+
+// --- batch read path ---
+
+// batchIterate reads a parquet file in record batches,
+// populating dest with each batch and calling fn. Dest is cleared between batches.
+// Uses Arrow's BatchSize to stream data without loading everything into memory.
+func batchIterate(filename string, dest any, fn func() error) error {
+	rv := reflect.ValueOf(dest)
+	if rv.Kind() != reflect.Map {
+		return fmt.Errorf("dest must be a map, got %T", dest)
+	}
+
+	pf, err := file.OpenParquetFile(filename, false)
+	if err != nil {
+		return err
+	}
+	defer pf.Close()
+
+	kvMeta := pf.MetaData().KeyValueMetadata()
+	cacheFormat := getMetaValue(kvMeta, "_cache_format")
+
+	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{BatchSize: kvBatchSize}, memory.NewGoAllocator())
+	if err != nil {
+		return err
+	}
+
+	rr, err := reader.GetRecordReader(context.Background(), nil, nil)
+	if err != nil {
+		return err
+	}
+	defer rr.Release()
+
+	destKeyType := rv.Type().Key()
+	destValType := rv.Type().Elem()
+
+	for {
+		rec, err := rr.Read()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		if rec == nil {
+			break
+		}
+
+		clearMap(rv)
+
+		numRows := int(rec.NumRows())
+		numCols := int(rec.NumCols())
+
+		if cacheFormat == "kv" {
+			keyCol := rec.Column(0)
+			valCol := rec.Column(1)
+			for i := 0; i < numRows; i++ {
+				k, err := getPreciseValue(keyCol, i)
+				if err != nil {
+					return err
+				}
+				v, err := getPreciseValue(valCol, i)
+				if err != nil {
+					return err
+				}
+				rv.SetMapIndex(
+					toReflectValue(k, destKeyType),
+					toReflectValue(v, destValType),
+				)
+			}
+		} else {
+			schema := rec.Schema()
+			for colIdx := 0; colIdx < numCols; colIdx++ {
+				fieldName := schema.Field(colIdx).Name
+				col := rec.Column(colIdx)
+				value, err := getPreciseValue(col, 0)
+				if err != nil {
+					return fmt.Errorf("column %s: %w", fieldName, err)
+				}
+				rv.SetMapIndex(
+					reflect.ValueOf(fieldName),
+					toReflectValue(value, destValType),
+				)
+			}
+		}
+
+		if err := fn(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// clearMap removes all entries from a map via reflection.
+func clearMap(rv reflect.Value) {
+	for _, k := range rv.MapKeys() {
+		rv.SetMapIndex(k, reflect.Value{})
+	}
 }
 
 // --- helpers ---

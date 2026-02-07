@@ -249,3 +249,71 @@ func TestEmptyMapIgnored(t *testing.T) {
 		t.Fatal("expected miss for empty map write")
 	}
 }
+
+func TestBatchIterateKV(t *testing.T) {
+	tmpDir := t.TempDir()
+	filename := filepath.Join(tmpDir, "batch_kv.parquet")
+
+	input := map[uint32]string{
+		1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+	}
+	cache.WriteMap(filename, input)
+
+	var totalKeys int
+	collected := make(map[uint32]string)
+
+	m := make(map[uint32]string)
+	ok := cache.MapBatchIterate(filename, m, func() error {
+		totalKeys += len(m)
+		for k, v := range m {
+			collected[k] = v
+		}
+		return nil
+	})
+	if !ok {
+		t.Fatal("expected successful batch iteration")
+	}
+	if totalKeys != 5 {
+		t.Errorf("expected 5 total keys, got %d", totalKeys)
+	}
+	for k, v := range input {
+		if collected[k] != v {
+			t.Errorf("key %d: expected %q, got %q", k, v, collected[k])
+		}
+	}
+}
+
+func TestBatchIterateStringMap(t *testing.T) {
+	tmpDir := t.TempDir()
+	filename := filepath.Join(tmpDir, "batch_map.parquet")
+
+	input := map[string]any{"x": int32(1), "y": int32(2)}
+	cache.WriteMap(filename, input)
+
+	calls := 0
+	m := make(map[string]any)
+	ok := cache.MapBatchIterate(filename, m, func() error {
+		calls++
+		if m["x"] != int32(1) || m["y"] != int32(2) {
+			t.Errorf("unexpected values: %v", m)
+		}
+		return nil
+	})
+	if !ok {
+		t.Fatal("expected successful iteration")
+	}
+	if calls != 1 {
+		t.Errorf("expected 1 batch call for single-row map, got %d", calls)
+	}
+}
+
+func TestBatchIterateMissing(t *testing.T) {
+	m := make(map[string]any)
+	ok := cache.MapBatchIterate("/nonexistent.parquet", m, func() error {
+		t.Fatal("should not be called")
+		return nil
+	})
+	if ok {
+		t.Fatal("expected false for missing file")
+	}
+}

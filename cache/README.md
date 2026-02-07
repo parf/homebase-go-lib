@@ -107,6 +107,6 @@ Returns `true` on hit (dest populated), `false` on miss.
 Corrupted files are treated as cache misses.
 
 ```go
-func WriteMap(filename string, data any)
+func WriteMap(filename string, data any) error
 ```
-Write any map to parquet cache file. Errors are silently ignored (cache is best-effort).
+Write any map to parquet cache file. Returns error on failure (e.g., disk full, permissions).
