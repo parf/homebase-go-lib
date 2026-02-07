@@ -18,7 +18,9 @@ import (
 	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 )
 
-const kvBatchSize = 1_000_000 // rows per batch (~16-20MB for typical KV rows)
+// BatchSize controls how many rows are read per batch in MapBatchIterate.
+// Default 1M rows (~16-20MB for typical KV rows). Adjust before calling MapBatchIterate.
+var BatchSize int64 = 1_000_000
 
 // Map reads a cached map from a parquet file into dest.
 // dest must be a pre-allocated map (e.g., make(map[uint32]string)).
@@ -554,7 +556,7 @@ func batchIterate(filename string, dest any, fn func() error) error {
 	kvMeta := pf.MetaData().KeyValueMetadata()
 	cacheFormat := getMetaValue(kvMeta, "_cache_format")
 
-	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{BatchSize: kvBatchSize}, memory.NewGoAllocator())
+	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{BatchSize: BatchSize}, memory.NewGoAllocator())
 	if err != nil {
 		return err
 	}
