@@ -120,9 +120,16 @@ Read parquet in batches (1M rows each), populating dest per batch and calling fn
 Dest is cleared between batches. Memory-efficient for large maps.
 Returns `true` on success, `false` on miss/error.
 
+```go
+var BatchSize int64 = 1_000_000
+```
+Controls rows per batch in MapBatchIterate. Default 1M rows (~16-20MB for typical KV).
+
 ### Batch iteration (memory-efficient)
 
 ```go
+cache.BatchSize = 2_000_000 // optional: adjust rows per batch
+
 m := make(map[uint32]string)
 ok := cache.MapBatchIterate("big-lookup.parquet", m, func() error {
     for k, v := range m {
