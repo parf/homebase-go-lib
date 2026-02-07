@@ -17,15 +17,16 @@ import (
 	"github.com/apache/arrow/go/v14/parquet/pqarrow"
 )
 
-// Map reads a cached map from a parquet file.
-// Returns (data, true) on cache hit, (nil, false) on miss.
-// The returned value is the original map type (e.g., map[string]any, map[uint32]string).
-func Map(filename string) (any, bool) {
-	result, err := readCache(filename)
-	if err != nil {
-		return nil, false
-	}
-	return result, true
+// Map reads a cached map from a parquet file into dest.
+// dest must be a pre-allocated map (e.g., make(map[uint32]string)).
+// Returns true on cache hit (dest populated), false on miss.
+//
+// Usage:
+//
+//	data := make(map[uint32]string)
+//	ok := cache.Map("lookup.parquet", data)
+func Map(filename string, dest any) bool {
+	return readCacheInto(filename, dest) == nil
 }
 
 // WriteMap writes any map to a parquet cache file.
@@ -398,37 +399,46 @@ func writeParquet(filename string, schema *arrow.Schema, fill func(*array.Record
 
 // --- read path ---
 
-func readCache(filename string) (any, error) {
+// readCacheInto reads a parquet cache file and populates the dest map.
+// The dest map's key/value types determine how parquet data is converted.
+func readCacheInto(filename string, dest any) error {
+	rv := reflect.ValueOf(dest)
+	if rv.Kind() != reflect.Map {
+		return fmt.Errorf("dest must be a map, got %T", dest)
+	}
+
 	pf, err := file.OpenParquetFile(filename, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer pf.Close()
 
 	// Read file-level metadata
 	kvMeta := pf.MetaData().KeyValueMetadata()
 	cacheFormat := getMetaValue(kvMeta, "_cache_format")
-	keyType := getMetaValue(kvMeta, "_cache_key_type")
 
 	reader, err := pqarrow.NewFileReader(pf, pqarrow.ArrowReadProperties{}, memory.NewGoAllocator())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tbl, err := reader.ReadTable(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tbl.Release()
 
 	if tbl.NumRows() == 0 {
-		return nil, fmt.Errorf("empty parquet file")
+		return fmt.Errorf("empty parquet file")
 	}
 
+	destKeyType := rv.Type().Key()
+	destValType := rv.Type().Elem()
+
 	if cacheFormat == "kv" {
-		return readKVColumns(tbl, keyType)
+		return readKVInto(tbl, rv, destKeyType, destValType)
 	}
-	return readMapColumns(tbl)
+	return readMapInto(tbl, rv, destValType)
 }
 
 // getMetaValue reads a value from parquet key-value metadata.
@@ -442,68 +452,68 @@ func getMetaValue(kvMeta metadata.KeyValueMetadata, key string) string {
 	return ""
 }
 
-// readMapColumns reads column-per-key format back to map[string]any.
-func readMapColumns(tbl arrow.Table) (any, error) {
+// readMapInto reads column-per-key format into a string-keyed map.
+func readMapInto(tbl arrow.Table, dest reflect.Value, valType reflect.Type) error {
 	numCols := int(tbl.NumCols())
 	schema := tbl.Schema()
-	result := make(map[string]any, numCols)
 
 	for colIdx := 0; colIdx < numCols; colIdx++ {
 		fieldName := schema.Field(colIdx).Name
 		col := tbl.Column(colIdx).Data().Chunk(0)
 		value, err := getPreciseValue(col, 0)
 		if err != nil {
-			return nil, fmt.Errorf("column %s: %w", fieldName, err)
+			return fmt.Errorf("column %s: %w", fieldName, err)
 		}
-		result[fieldName] = value
+		dest.SetMapIndex(
+			reflect.ValueOf(fieldName),
+			toReflectValue(value, valType),
+		)
 	}
-
-	return result, nil
+	return nil
 }
 
-// readKVColumns reads key-value format back to the original map type.
-func readKVColumns(tbl arrow.Table, keyType string) (any, error) {
+// readKVInto reads key-value columns into a typed map.
+func readKVInto(tbl arrow.Table, dest reflect.Value, keyType, valType reflect.Type) error {
 	numRows := int(tbl.NumRows())
 	keyCol := tbl.Column(0).Data().Chunk(0)
 	valCol := tbl.Column(1).Data().Chunk(0)
 
-	switch keyType {
-	case "int8":
-		return buildTypedMap[int8](keyCol, valCol, numRows)
-	case "int16":
-		return buildTypedMap[int16](keyCol, valCol, numRows)
-	case "int32":
-		return buildTypedMap[int32](keyCol, valCol, numRows)
-	case "int64", "int":
-		return buildTypedMap[int64](keyCol, valCol, numRows)
-	case "uint8":
-		return buildTypedMap[uint8](keyCol, valCol, numRows)
-	case "uint16":
-		return buildTypedMap[uint16](keyCol, valCol, numRows)
-	case "uint32":
-		return buildTypedMap[uint32](keyCol, valCol, numRows)
-	case "uint64", "uint":
-		return buildTypedMap[uint64](keyCol, valCol, numRows)
-	default:
-		return nil, fmt.Errorf("unsupported key type: %s", keyType)
-	}
-}
-
-// buildTypedMap reconstructs a map[K]any from key and value Arrow arrays.
-func buildTypedMap[K comparable](keyCol, valCol arrow.Array, numRows int) (any, error) {
-	result := make(map[K]any, numRows)
 	for i := 0; i < numRows; i++ {
 		k, err := getPreciseValue(keyCol, i)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		v, err := getPreciseValue(valCol, i)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		result[k.(K)] = v
+		dest.SetMapIndex(
+			toReflectValue(k, keyType),
+			toReflectValue(v, valType),
+		)
 	}
-	return result, nil
+	return nil
+}
+
+// toReflectValue converts a value to the target reflect.Type.
+// For interface{}/any targets, preserves the precise type.
+// For concrete targets, converts using reflect.Convert or fmt.Sprintf fallback.
+func toReflectValue(value any, targetType reflect.Type) reflect.Value {
+	if value == nil {
+		return reflect.Zero(targetType)
+	}
+	if targetType.Kind() == reflect.Interface {
+		return reflect.ValueOf(value)
+	}
+	rv := reflect.ValueOf(value)
+	if rv.Type().ConvertibleTo(targetType) {
+		return rv.Convert(targetType)
+	}
+	// Fallback: stringify for string targets
+	if targetType.Kind() == reflect.String {
+		return reflect.ValueOf(fmt.Sprintf("%v", value))
+	}
+	return reflect.Zero(targetType)
 }
 
 // --- helpers ---

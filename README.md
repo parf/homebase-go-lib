@@ -301,6 +301,31 @@ sql.SqlIterator(db, "SELECT * FROM users WHERE active = true", func(row map[stri
 })
 ```
 
+### 💾 `cache` - Map-to-Parquet File Caching
+
+Cache any Go map as a Parquet file with precise scalar type preservation.
+
+```go
+import "github.com/parf/homebase-go-lib/cache"
+
+data := make(map[string]any)
+if !cache.Map("lookup.parquet", data) {
+    data = expensiveComputation()
+    cache.WriteMap("lookup.parquet", data)
+}
+// use data directly — no type assertion needed
+```
+
+**Supports any map type** — `map[string]any`, `map[uint32]string`, `map[int]float64`, etc.
+
+**Features:**
+- ✅ Precise type preservation (uint32 stays uint32, float32 stays float32)
+- ✅ String-keyed maps (column-per-key) and numeric-keyed maps (key-value columns)
+- ✅ Best-effort caching — silent errors, corrupted files treated as misses
+- ✅ Internal Snappy compression
+
+**[📖 Full Documentation →](cache/README.md)**
+
 ---
 
 ## 🎯 Format Conversion Tools
@@ -434,6 +459,9 @@ homebase-go-lib/
 ├── 🗄️ sql/                # Database utilities
 │   ├── batch.go           # Batch insert operations
 │   └── iterator.go        # Query iteration
+│
+├── 💾 cache/              # Map-to-Parquet file caching
+│   └── mapcache.go        # Precise type-preserving cache
 │
 ├── 🎯 cmd/                # Command-line tools
 │   ├── any2parquet.go     # Universal → Parquet converter

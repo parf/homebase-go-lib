@@ -11,13 +11,13 @@ import "github.com/parf/homebase-go-lib/cache"
 ### Basic pattern
 
 ```go
-data, ok := cache.Map("users.parquet")
-if !ok {
+data := make(map[string]any)
+if !cache.Map("users.parquet", data) {
     // cache miss — compute data
     data = expensiveComputation()
     cache.WriteMap("users.parquet", data)
 }
-result := data.(map[string]any)
+// use data directly — no type assertion needed
 ```
 
 ### String-keyed maps
@@ -25,15 +25,16 @@ result := data.(map[string]any)
 ```go
 // map[string]any — each key becomes a parquet column
 m := map[string]any{
-    "name":  "Alice",
-    "age":   uint32(30),
-    "score": float64(95.5),
+    "name":   "Alice",
+    "age":    uint32(30),
+    "score":  float64(95.5),
     "active": true,
 }
 cache.WriteMap("profile.parquet", m)
 
-data, ok := cache.Map("profile.parquet")
-// data.(map[string]any)["age"] is uint32(30) — type preserved
+cached := make(map[string]any)
+cache.Map("profile.parquet", cached)
+// cached["age"] is uint32(30) — type preserved
 ```
 
 ### Numeric-keyed maps
@@ -47,9 +48,10 @@ lookup := map[uint32]string{
 }
 cache.WriteMap("lookup.parquet", lookup)
 
-data, ok := cache.Map("lookup.parquet")
-result := data.(map[uint32]any)
-// result[uint32(1)] == "one"
+// read back into the same type
+cached := make(map[uint32]string)
+cache.Map("lookup.parquet", cached)
+// cached[1] == "one"
 ```
 
 ### Any map key/value combination
@@ -57,6 +59,12 @@ result := data.(map[uint32]any)
 ```go
 cache.WriteMap("ids.parquet", map[int]float64{1: 1.1, 2: 2.2})
 cache.WriteMap("flags.parquet", map[uint32]uint64{10: 1000, 20: 2000})
+
+ids := make(map[int64]float64)   // int promoted to int64
+cache.Map("ids.parquet", ids)
+
+flags := make(map[uint32]uint64)
+cache.Map("flags.parquet", flags)
 ```
 
 ## Type Preservation
@@ -92,9 +100,10 @@ All scalar types survive the parquet round-trip with their exact Go type:
 ## API
 
 ```go
-func Map(filename string) (any, bool)
+func Map(filename string, dest any) bool
 ```
-Read cached map from parquet file. Returns `(data, true)` on hit, `(nil, false)` on miss.
+Read cached map from parquet file into `dest`. The dest map's key/value types determine how data is converted.
+Returns `true` on hit (dest populated), `false` on miss.
 Corrupted files are treated as cache misses.
 
 ```go

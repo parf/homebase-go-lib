@@ -13,12 +13,13 @@ func TestCacheMissAndHit(t *testing.T) {
 	filename := filepath.Join(tmpDir, "test.parquet")
 
 	// Miss: file doesn't exist
-	data, ok := cache.Map(filename)
+	data := make(map[string]any)
+	ok := cache.Map(filename, data)
 	if ok {
 		t.Fatal("expected cache miss (false), got hit")
 	}
-	if data != nil {
-		t.Fatalf("expected nil on miss, got %v", data)
+	if len(data) != 0 {
+		t.Fatalf("expected empty map on miss, got %v", data)
 	}
 
 	// Write
@@ -26,16 +27,16 @@ func TestCacheMissAndHit(t *testing.T) {
 	cache.WriteMap(filename, input)
 
 	// Hit: file now exists
-	data, ok = cache.Map(filename)
+	data = make(map[string]any)
+	ok = cache.Map(filename, data)
 	if !ok {
 		t.Fatal("expected cache hit (true), got miss")
 	}
-	m := data.(map[string]any)
-	if m["name"] != "Alice" {
-		t.Errorf("expected name=Alice, got %v", m["name"])
+	if data["name"] != "Alice" {
+		t.Errorf("expected name=Alice, got %v", data["name"])
 	}
-	if m["age"] != int64(30) {
-		t.Errorf("expected age=30 (int64), got %v (%T)", m["age"], m["age"])
+	if data["age"] != int64(30) {
+		t.Errorf("expected age=30 (int64), got %v (%T)", data["age"], data["age"])
 	}
 }
 
@@ -44,20 +45,18 @@ func TestStringKeyedMap(t *testing.T) {
 	filename := filepath.Join(tmpDir, "strmap.parquet")
 
 	input := map[string]any{
-		"city":    "NYC",
-		"score":   float64(99.5),
-		"active":  true,
-		"count":   int32(42),
+		"city":   "NYC",
+		"score":  float64(99.5),
+		"active": true,
+		"count":  int32(42),
 	}
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	m := make(map[string]any)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	m := data.(map[string]any)
 	if m["city"] != "NYC" {
 		t.Errorf("city: expected NYC, got %v", m["city"])
 	}
@@ -93,12 +92,10 @@ func TestRoundTripAllTypes(t *testing.T) {
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	m := make(map[string]any)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	m := data.(map[string]any)
 
 	tests := []struct {
 		key      string
@@ -138,12 +135,10 @@ func TestIntAndUintPromotion(t *testing.T) {
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	m := make(map[string]any)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	m := data.(map[string]any)
 
 	// int → int64 on read
 	if v, ok := m["v_int"].(int64); !ok || v != 999 {
@@ -167,12 +162,11 @@ func TestUint32StringMap(t *testing.T) {
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	// Read back into same type — no type assertion needed!
+	m := make(map[uint32]string)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	m := data.(map[uint32]any)
 	if m[1] != "one" {
 		t.Errorf("key 1: expected 'one', got %v", m[1])
 	}
@@ -195,17 +189,15 @@ func TestUint32Uint64Map(t *testing.T) {
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	m := make(map[uint32]uint64)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	m := data.(map[uint32]any)
-	if m[uint32(10)] != uint64(1000) {
-		t.Errorf("key 10: expected uint64(1000), got %v (%T)", m[uint32(10)], m[uint32(10)])
+	if m[10] != 1000 {
+		t.Errorf("key 10: expected 1000, got %v", m[10])
 	}
-	if m[uint32(20)] != uint64(2000) {
-		t.Errorf("key 20: expected uint64(2000), got %v (%T)", m[uint32(20)], m[uint32(20)])
+	if m[20] != 2000 {
+		t.Errorf("key 20: expected 2000, got %v", m[20])
 	}
 }
 
@@ -213,7 +205,6 @@ func TestIntAnyMap(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "intany.parquet")
 
-	// All values same type → preserved
 	input := map[int]any{
 		1: float64(1.1),
 		2: float64(2.2),
@@ -222,18 +213,16 @@ func TestIntAnyMap(t *testing.T) {
 
 	cache.WriteMap(filename, input)
 
-	data, ok := cache.Map(filename)
-	if !ok {
+	// int keys promoted to int64 in storage, so read with int64 keys
+	m := make(map[int64]any)
+	if !cache.Map(filename, m) {
 		t.Fatal("expected hit")
 	}
-
-	// int keys are promoted to int64 in storage
-	m := data.(map[int64]any)
-	if m[int64(1)] != float64(1.1) {
-		t.Errorf("key 1: expected 1.1, got %v", m[int64(1)])
+	if m[1] != float64(1.1) {
+		t.Errorf("key 1: expected 1.1, got %v", m[1])
 	}
-	if m[int64(2)] != float64(2.2) {
-		t.Errorf("key 2: expected 2.2, got %v", m[int64(2)])
+	if m[2] != float64(2.2) {
+		t.Errorf("key 2: expected 2.2, got %v", m[2])
 	}
 }
 
@@ -243,12 +232,9 @@ func TestCorruptedFile(t *testing.T) {
 
 	os.WriteFile(filename, []byte("not a parquet file"), 0644)
 
-	data, ok := cache.Map(filename)
-	if ok {
+	m := make(map[string]any)
+	if cache.Map(filename, m) {
 		t.Fatal("expected miss for corrupted file")
-	}
-	if data != nil {
-		t.Fatalf("expected nil, got %v", data)
 	}
 }
 
@@ -256,11 +242,10 @@ func TestEmptyMapIgnored(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "empty.parquet")
 
-	// Writing empty map should not create file
 	cache.WriteMap(filename, map[string]any{})
 
-	_, ok := cache.Map(filename)
-	if ok {
+	m := make(map[string]any)
+	if cache.Map(filename, m) {
 		t.Fatal("expected miss for empty map write")
 	}
 }
