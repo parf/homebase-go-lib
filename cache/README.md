@@ -112,3 +112,22 @@ Corrupted files are treated as cache misses.
 func WriteMap(filename string, data any) error
 ```
 Write any map to parquet cache file. Returns error on failure (e.g., disk full, permissions).
+
+```go
+func MapBatchIterate(filename string, dest any, fn func() error) bool
+```
+Read parquet in batches (1M rows each), populating dest per batch and calling fn.
+Dest is cleared between batches. Memory-efficient for large maps.
+Returns `true` on success, `false` on miss/error.
+
+### Batch iteration (memory-efficient)
+
+```go
+m := make(map[uint32]string)
+ok := cache.MapBatchIterate("big-lookup.parquet", m, func() error {
+    for k, v := range m {
+        process(k, v)
+    }
+    return nil
+})
+```
