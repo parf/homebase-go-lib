@@ -15,7 +15,9 @@ data := make(map[string]any)
 if !cache.Map("users.parquet", data) {
     // cache miss — compute data
     data = expensiveComputation()
-    cache.WriteMap("users.parquet", data)
+    if err := cache.WriteMap("users.parquet", data); err != nil {
+        log.Printf("cache write failed: %v", err)
+    }
 }
 // use data directly — no type assertion needed
 ```

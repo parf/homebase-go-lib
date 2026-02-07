@@ -311,7 +311,9 @@ import "github.com/parf/homebase-go-lib/cache"
 data := make(map[string]any)
 if !cache.Map("lookup.parquet", data) {
     data = expensiveComputation()
-    cache.WriteMap("lookup.parquet", data)
+    if err := cache.WriteMap("lookup.parquet", data); err != nil {
+        log.Printf("cache write failed: %v", err)
+    }
 }
 // use data directly — no type assertion needed
 ```
